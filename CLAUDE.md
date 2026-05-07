@@ -17,10 +17,17 @@ start retro-shooter/index.html
 
 ## Git & GitHub Workflow
 
-Every meaningful change must be committed and pushed to GitHub (`pgyimah2026/retro-shooter`). Always:
+**After every piece of work — no exceptions — commit and push to GitHub so no progress is ever lost.**
+
+Remote: `https://github.com/pgyimah2026/retro-shooter` (branch `master`)
+
+Rules:
 1. Stage only the relevant files (never `git add -A` blindly)
-2. Write a clear, descriptive commit message explaining *why*, not just what
-3. Push immediately after committing
+2. Commit message format: short imperative subject line, then a blank line, then a brief body explaining *why* the change was made
+3. Push immediately after every commit — never leave committed work unpushed
+4. If multiple logical changes were made in one session, split them into separate commits before pushing
+
+This applies to every task: feature additions, bug fixes, tweaks, and file additions alike. The goal is that the GitHub repo always reflects the current working state of the project.
 
 ## Architecture — `retro-shooter/index.html`
 
