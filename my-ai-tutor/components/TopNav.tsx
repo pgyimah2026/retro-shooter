@@ -19,7 +19,7 @@ export default function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
       {/* Logo */}
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
-          <Bot className="h-4.5 w-4.5 text-white" />
+          <Bot className="h-5 w-5 text-white" />
         </div>
         <span className="hidden font-semibold text-slate-100 sm:block">PyTutor</span>
       </div>

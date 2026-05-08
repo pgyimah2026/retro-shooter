@@ -140,7 +140,7 @@ function ToolCard({
     <div className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900">
       <div className="flex items-start gap-3.5 border-b border-slate-800 px-5 py-4">
         <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", accent)}>
-          <Icon className="h-4.5 w-4.5 text-white" />
+          <Icon className="h-5 w-5 text-white" />
         </div>
         <div>
           <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
