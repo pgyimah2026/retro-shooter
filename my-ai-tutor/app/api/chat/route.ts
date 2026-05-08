@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 60;
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(req: Request) {
   let body: { messages: { role: "user" | "assistant"; content: string }[]; systemPrompt: string };
 
@@ -26,6 +24,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured" }, { status: 500 });
   }
 
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
   try {
     const stream = client.messages.stream({
       model: "claude-sonnet-4-6",
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     const readable = new ReadableStream({
       async start(controller) {
         const enc = new TextEncoder();
+        let errored = false;
         try {
           for await (const chunk of stream) {
             if (
@@ -47,9 +48,10 @@ export async function POST(req: Request) {
             }
           }
         } catch (err) {
+          errored = true;
           controller.error(err);
         } finally {
-          controller.close();
+          if (!errored) controller.close();
         }
       },
     });
