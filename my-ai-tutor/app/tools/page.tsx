@@ -4,15 +4,13 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  Zap,
+  BarChart2,
+  BookOpen,
   ArrowLeftRight,
-  Bug,
-  Hammer,
+  FileText,
   Loader2,
   Copy,
   Check,
-  CheckSquare,
-  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,30 +96,7 @@ const proseMd: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   td: ({ children }) => <td className="px-3 py-2.5 text-xs text-slate-300">{children}</td>,
 };
 
-const checklistMd: React.ComponentProps<typeof ReactMarkdown>["components"] = {
-  ...proseMd,
-  ul: ({ children }) => <ul className="space-y-1">{children}</ul>,
-  li: ({ children }) => (
-    <li className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-300">{children}</li>
-  ),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  input: ({ type, checked }: any) => {
-    if (type !== "checkbox") return null;
-    return checked ? (
-      <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-    ) : (
-      <Square className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-    );
-  },
-  p: ({ children }) => <>{children}</>,
-  strong: ({ children }) => (
-    <strong className="mb-1 mt-3 block text-xs font-semibold uppercase tracking-wider text-slate-400 first:mt-0">
-      {children}
-    </strong>
-  ),
-};
-
-// ─── Shared card wrapper ──────────────────────────────────────────────────────
+// ─── Shared UI helpers ────────────────────────────────────────────────────────
 
 function ToolCard({
   icon: Icon,
@@ -151,8 +126,6 @@ function ToolCard({
     </div>
   );
 }
-
-// ─── Shared result area ───────────────────────────────────────────────────────
 
 function ResultBox({
   children,
@@ -202,13 +175,13 @@ function GenerateButton({
   disabled: boolean;
   loadingLabel: string;
   label: string;
-  color?: "emerald" | "purple" | "green" | "indigo";
+  color?: "emerald" | "purple" | "indigo" | "blue";
 }) {
   const colors = {
     emerald: "bg-emerald-600 hover:bg-emerald-500",
     purple: "bg-purple-600 hover:bg-purple-500",
-    green: "bg-emerald-600 hover:bg-emerald-500",
     indigo: "bg-indigo-600 hover:bg-indigo-500",
+    blue: "bg-blue-600 hover:bg-blue-500",
   };
   return (
     <button
@@ -231,93 +204,103 @@ function GenerateButton({
   );
 }
 
-// ─── Tool 1: Big-O Reference ──────────────────────────────────────────────────
+// ─── Tool 1: Financial Ratio Calculator (static) ──────────────────────────────
 
-const BIG_O_DATA: {
-  ds: string;
-  operations: { op: string; time: string; note?: string }[];
-}[] = [
-  {
-    ds: "list",
-    operations: [
-      { op: "Access (l[i])", time: "O(1)" },
-      { op: "Append (l.append)", time: "O(1) amortized" },
-      { op: "Insert (l.insert)", time: "O(n)" },
-      { op: "Delete (l.pop(i) / del)", time: "O(n)" },
-      { op: "Pop last (l.pop())", time: "O(1)" },
-      { op: "Search (in)", time: "O(n)" },
-      { op: "Sort (l.sort)", time: "O(n log n)", note: "Timsort" },
-    ],
-  },
-  {
-    ds: "dict",
-    operations: [
-      { op: "Get (d[k])", time: "O(1) avg" },
-      { op: "Set (d[k] = v)", time: "O(1) avg" },
-      { op: "Delete (del d[k])", time: "O(1) avg" },
-      { op: "Key lookup (in)", time: "O(1) avg" },
-      { op: "Iteration (.items())", time: "O(n)" },
-    ],
-  },
-  {
-    ds: "set",
-    operations: [
-      { op: "Add (s.add)", time: "O(1) avg" },
-      { op: "Remove (s.remove)", time: "O(1) avg" },
-      { op: "Lookup (in)", time: "O(1) avg" },
-      { op: "Union (| or .union)", time: "O(n + m)" },
-      { op: "Intersection (& or .intersection)", time: "O(min(n, m))" },
-    ],
-  },
-  {
-    ds: "deque",
-    operations: [
-      { op: "Append right (.append)", time: "O(1)" },
-      { op: "Append left (.appendleft)", time: "O(1)" },
-      { op: "Pop right (.pop)", time: "O(1)" },
-      { op: "Pop left (.popleft)", time: "O(1)" },
-      { op: "Random access ([i])", time: "O(n)" },
-    ],
-  },
-  {
-    ds: "heapq",
-    operations: [
-      { op: "heappush(h, x)", time: "O(log n)" },
-      { op: "heappop(h)", time: "O(log n)" },
-      { op: "heapify(l)", time: "O(n)" },
-      { op: "Peek min (h[0])", time: "O(1)" },
-      { op: "nlargest / nsmallest", time: "O(n log k)" },
-    ],
-  },
-];
-
-function complexityColor(time: string) {
-  if (time.startsWith("O(1)")) return "text-green-400";
-  if (time.startsWith("O(log")) return "text-emerald-400";
-  if (time.startsWith("O(n log")) return "text-yellow-400";
-  return "text-orange-400";
+interface RatioInputs {
+  currentAssets: string;
+  currentLiabilities: string;
+  inventory: string;
+  totalDebt: string;
+  totalEquity: string;
+  netIncome: string;
+  totalAssets: string;
+  revenue: string;
+  grossProfit: string;
 }
 
-function BigOReference() {
-  const [selected, setSelected] = useState(0);
-  const data = BIG_O_DATA[selected];
+const EMPTY_INPUTS: RatioInputs = {
+  currentAssets: "",
+  currentLiabilities: "",
+  inventory: "",
+  totalDebt: "",
+  totalEquity: "",
+  netIncome: "",
+  totalAssets: "",
+  revenue: "",
+  grossProfit: "",
+};
+
+function parseNum(v: string): number {
+  const n = parseFloat(v.replace(/,/g, ""));
+  return isNaN(n) ? NaN : n;
+}
+
+function fmt(n: number, decimals = 2): string {
+  if (!isFinite(n)) return "—";
+  return n.toFixed(decimals) + (decimals === 0 ? "" : "");
+}
+
+function ratioColor(label: string, value: number): string {
+  if (!isFinite(value)) return "text-slate-500";
+  if (label === "Current Ratio") return value >= 2 ? "text-green-400" : value >= 1 ? "text-yellow-400" : "text-red-400";
+  if (label === "Quick Ratio") return value >= 1 ? "text-green-400" : value >= 0.5 ? "text-yellow-400" : "text-red-400";
+  if (label === "Debt-to-Equity") return value <= 1 ? "text-green-400" : value <= 2 ? "text-yellow-400" : "text-red-400";
+  return "text-emerald-400";
+}
+
+function FinancialRatioCalculator() {
+  const [inputs, setInputs] = useState<RatioInputs>(EMPTY_INPUTS);
+
+  function set(key: keyof RatioInputs, val: string) {
+    setInputs((prev) => ({ ...prev, [key]: val }));
+  }
+
+  const ca = parseNum(inputs.currentAssets);
+  const cl = parseNum(inputs.currentLiabilities);
+  const inv = parseNum(inputs.inventory);
+  const debt = parseNum(inputs.totalDebt);
+  const equity = parseNum(inputs.totalEquity);
+  const ni = parseNum(inputs.netIncome);
+  const ta = parseNum(inputs.totalAssets);
+  const rev = parseNum(inputs.revenue);
+  const gp = parseNum(inputs.grossProfit);
+
+  const ratios = [
+    { label: "Current Ratio", formula: "Current Assets / Current Liabilities", value: ca / cl, suffix: "x", tip: "≥ 2 healthy" },
+    { label: "Quick Ratio", formula: "(Current Assets − Inventory) / Current Liabilities", value: (ca - inv) / cl, suffix: "x", tip: "≥ 1 healthy" },
+    { label: "Debt-to-Equity", formula: "Total Debt / Total Equity", value: debt / equity, suffix: "x", tip: "≤ 1 conservative" },
+    { label: "Return on Assets", formula: "Net Income / Total Assets × 100", value: (ni / ta) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Return on Equity", formula: "Net Income / Total Equity × 100", value: (ni / equity) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Net Profit Margin", formula: "Net Income / Revenue × 100", value: (ni / rev) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Gross Profit Margin", formula: "Gross Profit / Revenue × 100", value: (gp / rev) * 100, suffix: "%", tip: "Higher = better" },
+  ];
+
+  const fields: { key: keyof RatioInputs; label: string }[] = [
+    { key: "currentAssets", label: "Current Assets" },
+    { key: "currentLiabilities", label: "Current Liabilities" },
+    { key: "inventory", label: "Inventory" },
+    { key: "totalDebt", label: "Total Debt" },
+    { key: "totalEquity", label: "Total Equity" },
+    { key: "netIncome", label: "Net Income" },
+    { key: "totalAssets", label: "Total Assets" },
+    { key: "revenue", label: "Revenue" },
+    { key: "grossProfit", label: "Gross Profit" },
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">
-        {BIG_O_DATA.map((d, i) => (
-          <button
-            key={d.ds}
-            onClick={() => setSelected(i)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 font-mono text-xs font-medium transition-colors",
-              i === selected
-                ? "bg-emerald-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:text-slate-200"
-            )}
-          >
-            {d.ds}
-          </button>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {fields.map(({ key, label }) => (
+          <div key={key}>
+            <label className="mb-1 block text-xs text-slate-500">{label}</label>
+            <input
+              type="number"
+              value={inputs[key]}
+              onChange={(e) => set(key, e.target.value)}
+              placeholder="0"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-emerald-500"
+            />
+          </div>
         ))}
       </div>
 
@@ -325,26 +308,19 @@ function BigOReference() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-800/60">
-              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Operation
-              </th>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Complexity
-              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Ratio</th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Value</th>
+              <th className="hidden px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Benchmark</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
-            {data.operations.map(({ op, time, note }) => (
-              <tr key={op} className="hover:bg-slate-800/30">
-                <td className="px-4 py-2.5">
-                  <code className="font-mono text-xs text-slate-300">{op}</code>
+            {ratios.map(({ label, value, suffix, tip }) => (
+              <tr key={label} className="hover:bg-slate-800/30">
+                <td className="px-4 py-2.5 text-xs text-slate-300">{label}</td>
+                <td className={cn("px-4 py-2.5 font-mono text-xs font-semibold", ratioColor(label, value))}>
+                  {isFinite(value) ? fmt(value) + suffix : "—"}
                 </td>
-                <td className="px-4 py-2.5">
-                  <span className={cn("font-mono text-xs font-semibold", complexityColor(time))}>
-                    {time}
-                  </span>
-                  {note && <span className="ml-2 text-xs text-slate-600">— {note}</span>}
-                </td>
+                <td className="hidden px-4 py-2.5 text-xs text-slate-600 sm:table-cell">{tip}</td>
               </tr>
             ))}
           </tbody>
@@ -352,15 +328,85 @@ function BigOReference() {
       </div>
 
       <p className="text-[11px] text-slate-600">
-        CPython implementation. &ldquo;avg&rdquo; = average case; worst case may differ due to hash collisions.
+        Enter values in the same currency unit. Ratios auto-calculate as you type.
       </p>
     </div>
   );
 }
 
-// ─── Tool 2: Code Comparator ──────────────────────────────────────────────────
+// ─── Tool 2: Journal Entry Helper (AI) ───────────────────────────────────────
 
-function CodeComparator() {
+function JournalEntryHelper() {
+  const [transaction, setTransaction] = useState("");
+  const { result, loading, error, stream, reset } = useToolStream();
+
+  async function generate() {
+    if (!transaction.trim() || loading) return;
+    await stream(
+      `Transaction: "${transaction.trim()}"`,
+      `You are an accounting tutor specializing in journal entries. The user will describe a business transaction. Generate the correct journal entry using this exact markdown format:
+
+## Journal Entry
+
+| Account | Debit ($) | Credit ($) |
+|---------|-----------|------------|
+| Account Name | amount or — | amount or — |
+
+Rules:
+- Use "—" in a cell when no amount applies for that side
+- List debits first, then credits
+- Indent credit account names with two spaces as per accounting convention (e.g. "  Cash")
+- Use real account names (e.g. Accounts Receivable, Revenue, Cash, Inventory)
+
+After the table, add:
+## Explanation
+A 2–3 sentence plain-English explanation of why each account is debited or credited, referencing the accounting equation or double-entry principles.
+
+Keep it concise and educational.`
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-400">
+          Describe the transaction
+        </label>
+        <textarea
+          value={transaction}
+          onChange={(e) => { setTransaction(e.target.value); reset(); }}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), generate())}
+          placeholder="e.g. Purchased $5,000 of office equipment on credit"
+          rows={3}
+          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+        />
+      </div>
+
+      <GenerateButton
+        onClick={generate}
+        loading={loading}
+        disabled={!transaction.trim()}
+        loadingLabel="Building entry…"
+        label="Generate Journal Entry"
+        color="emerald"
+      />
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      {result && (
+        <ResultBox copyText={result} className="border-emerald-900/40 bg-emerald-900/10">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>
+            {result}
+          </ReactMarkdown>
+        </ResultBox>
+      )}
+    </div>
+  );
+}
+
+// ─── Tool 3: Concept Comparator (AI) ─────────────────────────────────────────
+
+function ConceptComparator() {
   const [conceptA, setConceptA] = useState("");
   const [conceptB, setConceptB] = useState("");
   const { result, loading, error, stream, reset } = useToolStream();
@@ -368,18 +414,18 @@ function CodeComparator() {
   async function compare() {
     if (!conceptA.trim() || !conceptB.trim() || loading) return;
     await stream(
-      `Compare "${conceptA.trim()}" vs "${conceptB.trim()}" in Python`,
-      `You are a Python programming expert creating a structured comparison for students.
+      `Compare "${conceptA.trim()}" vs "${conceptB.trim()}" in accounting`,
+      `You are an accounting expert creating a structured comparison for students.
 
-Generate a clear markdown comparison between the two Python concepts the user provides.
+Generate a clear markdown comparison between the two accounting concepts the user provides.
 
 Format:
-1. One-sentence intro describing both concepts in context
+1. One-sentence intro contextualising both concepts
 2. A markdown table with columns: Aspect | ${conceptA} | ${conceptB}
-   Include these rows: Definition, Syntax Example (short inline code), Mutability / Side Effects, Performance, Best Used When, Common Pitfall
+   Include these rows: Definition, Key Feature, When Used, Example, Advantage, Common Pitfall
 3. A bold **Key Takeaway** line with the single most important distinction
 
-Keep table cells concise (1–2 sentences or a short code snippet). No preamble before the intro.`
+Keep table cells concise (1–2 sentences). No preamble before the intro.`
     );
   }
 
@@ -391,7 +437,7 @@ Keep table cells concise (1–2 sentences or a short code snippet). No preamble 
           <input
             value={conceptA}
             onChange={(e) => { setConceptA(e.target.value); reset(); }}
-            placeholder="e.g. list"
+            placeholder="e.g. Accrual basis"
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-indigo-500"
           />
         </div>
@@ -401,7 +447,7 @@ Keep table cells concise (1–2 sentences or a short code snippet). No preamble 
             value={conceptB}
             onChange={(e) => { setConceptB(e.target.value); reset(); }}
             onKeyDown={(e) => e.key === "Enter" && compare()}
-            placeholder="e.g. tuple"
+            placeholder="e.g. Cash basis"
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-indigo-500"
           />
         </div>
@@ -429,34 +475,34 @@ Keep table cells concise (1–2 sentences or a short code snippet). No preamble 
   );
 }
 
-// ─── Tool 3: Error Explainer ──────────────────────────────────────────────────
+// ─── Tool 4: Financial Statement Analyzer (AI) ───────────────────────────────
 
-function ErrorExplainer() {
-  const [traceback, setTraceback] = useState("");
+function StatementAnalyzer() {
+  const [scenario, setScenario] = useState("");
   const { result, loading, error, stream, reset } = useToolStream();
-  const charCount = traceback.length;
+  const charCount = scenario.length;
 
-  async function explain() {
-    if (!traceback.trim() || loading) return;
+  async function analyze() {
+    if (!scenario.trim() || loading) return;
     await stream(
-      traceback.trim(),
-      `You are a Python debugging expert helping students understand errors.
+      scenario.trim(),
+      `You are an accounting tutor helping students understand financial statements and scenarios.
 
-The user will paste a Python error message or traceback. Structure your response with exactly these four markdown headers:
+The user will describe a financial statement, a set of figures, or an accounting scenario. Analyze it using exactly these markdown sections:
 
-## Error Type
-What kind of error this is (e.g. TypeError, IndexError, SyntaxError) and what it means in general.
+## Key Observations
+2–4 bullet points identifying the most important figures or patterns.
 
-## Root Cause
-What specifically went wrong — reference the relevant line and explain why Python raised this error.
+## Ratio Highlights
+Calculate and interpret any relevant ratios you can derive from the data provided (e.g. liquidity, profitability, leverage). If numbers are not present, explain which ratios would apply and why.
 
-## How to Fix
-A concrete fix with a corrected code snippet in a Python code block.
+## Areas of Concern
+1–3 bullet points flagging potential issues, red flags, or items that warrant further investigation.
 
-## How to Prevent
-One or two best-practice tips to avoid this class of error in the future.
+## Learning Takeaways
+1–2 sentences summarizing what an accounting student should learn from this scenario.
 
-Keep each section concise (2–4 sentences). If the input is not a Python error, politely say so.`
+Keep each section concise (2–4 sentences or bullet points). If the input is not financial in nature, politely redirect.`
     );
   }
 
@@ -465,101 +511,36 @@ Keep each section concise (2–4 sentences). If the input is not a Python error,
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-xs font-medium text-slate-400">
-            Paste your Python error or traceback
+            Paste financial data or describe a scenario
           </label>
           <span className={cn("text-xs", charCount > 2000 ? "text-red-400" : "text-slate-600")}>
             {charCount}/2000
           </span>
         </div>
         <textarea
-          value={traceback}
-          onChange={(e) => { setTraceback(e.target.value); reset(); }}
-          placeholder={"Traceback (most recent call last):\n  File \"main.py\", line 5\n    print(my_list[10])\nIndexError: list index out of range"}
+          value={scenario}
+          onChange={(e) => { setScenario(e.target.value); reset(); }}
+          placeholder={"e.g. Current Assets: $120,000 | Current Liabilities: $80,000 | Net Income: $25,000 | Revenue: $200,000 | Total Assets: $350,000"}
           rows={5}
           maxLength={2000}
-          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder-slate-600 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20"
+          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
         />
       </div>
 
       <GenerateButton
-        onClick={explain}
+        onClick={analyze}
         loading={loading}
-        disabled={!traceback.trim()}
-        loadingLabel="Analyzing error…"
-        label="Explain This Error"
-        color="purple"
+        disabled={!scenario.trim()}
+        loadingLabel="Analyzing…"
+        label="Analyze Statement"
+        color="blue"
       />
 
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       {result && (
-        <ResultBox copyText={result} className="border-purple-900/40 bg-purple-900/10">
+        <ResultBox copyText={result} className="border-blue-900/40 bg-blue-900/10">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>
-            {result}
-          </ReactMarkdown>
-        </ResultBox>
-      )}
-    </div>
-  );
-}
-
-// ─── Tool 4: Project Builder ──────────────────────────────────────────────────
-
-function ProjectBuilder() {
-  const [project, setProject] = useState("");
-  const { result, loading, error, stream, reset } = useToolStream();
-
-  async function generate() {
-    if (!project.trim() || loading) return;
-    await stream(
-      project.trim(),
-      `You are a Python development mentor. The user will describe a Python project idea.
-
-Generate a detailed, phase-by-phase build checklist using markdown task list syntax.
-
-Format rules:
-- Use "- [ ] Step" syntax for every task
-- Group tasks under bold phase headers (e.g. **Phase 1: Project Setup**, **Phase 2: Core Logic**)
-- Recommend specific Python libraries/tools where appropriate (e.g. requests, pandas, FastAPI, pytest)
-- Each step must be specific and actionable — no vague steps like "do research"
-- Add a realistic time estimate in parentheses at the end of each step, e.g. (30 min)
-- Include 10–16 total steps across all phases
-- Always end with a **Phase: Testing & Polish** section covering tests, README, and error handling
-
-Output only the checklist. No preamble or closing remarks.`
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <label className="mb-1 block text-xs font-medium text-slate-400">
-          Describe your Python project
-        </label>
-        <input
-          value={project}
-          onChange={(e) => { setProject(e.target.value); reset(); }}
-          onKeyDown={(e) => e.key === "Enter" && generate()}
-          placeholder="e.g. A web scraper that fetches news headlines and saves them to a CSV"
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
-        />
-      </div>
-
-      <GenerateButton
-        onClick={generate}
-        loading={loading}
-        disabled={!project.trim()}
-        loadingLabel="Building your plan…"
-        label="Generate Build Plan"
-        color="green"
-      />
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
-
-      {result && (
-        <ResultBox copyText={result} className="border-emerald-900/40 bg-emerald-900/10">
-          <p className="mb-3 text-xs font-semibold text-emerald-400">Python Project Build Plan</p>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={checklistMd}>
             {result}
           </ReactMarkdown>
         </ResultBox>
@@ -572,36 +553,36 @@ Output only the checklist. No preamble or closing remarks.`
 
 const TOOLS = [
   {
-    icon: Zap,
-    title: "Big-O Reference",
+    icon: BarChart2,
+    title: "Financial Ratio Calculator",
     description:
-      "Look up time complexity for Python's built-in data structures: list, dict, set, deque, and heapq.",
+      "Enter balance sheet and income statement figures to instantly compute key liquidity, profitability, and leverage ratios.",
     accent: "bg-emerald-600",
-    component: BigOReference,
+    component: FinancialRatioCalculator,
+  },
+  {
+    icon: BookOpen,
+    title: "Journal Entry Helper",
+    description:
+      "Describe any business transaction and Claude generates the correct double-entry journal entry with a plain-English explanation.",
+    accent: "bg-emerald-600",
+    component: JournalEntryHelper,
   },
   {
     icon: ArrowLeftRight,
-    title: "Code Comparator",
+    title: "Concept Comparator",
     description:
-      "Enter any two Python concepts and Claude generates a structured side-by-side comparison with code examples.",
+      "Enter any two accounting concepts and Claude builds a structured side-by-side comparison table with examples.",
     accent: "bg-indigo-600",
-    component: CodeComparator,
+    component: ConceptComparator,
   },
   {
-    icon: Bug,
-    title: "Error Explainer",
+    icon: FileText,
+    title: "Statement Analyzer",
     description:
-      "Paste a Python traceback and Claude explains the error type, root cause, fix, and how to prevent it.",
-    accent: "bg-purple-600",
-    component: ErrorExplainer,
-  },
-  {
-    icon: Hammer,
-    title: "Project Builder",
-    description:
-      "Describe a Python project and Claude generates a phased build checklist with library recommendations.",
-    accent: "bg-emerald-600",
-    component: ProjectBuilder,
+      "Paste financial figures or describe a scenario and Claude identifies key observations, ratios, and red flags.",
+    accent: "bg-blue-600",
+    component: StatementAnalyzer,
   },
 ];
 
@@ -611,7 +592,7 @@ export default function ToolsPage() {
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 sm:px-6 sm:py-4">
         <h1 className="text-sm font-semibold text-slate-100">Tools</h1>
         <p className="text-xs text-slate-500">
-          Python-focused utilities for code, debugging, and learning
+          Accounting utilities — ratio calculator, journal entries, concept comparisons, and statement analysis
         </p>
       </div>
 

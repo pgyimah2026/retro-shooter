@@ -15,28 +15,28 @@ import type { Message } from "@/types";
 
 const STARTERS = [
   {
-    title: "List comprehensions",
-    prompt: "Explain Python list comprehensions with clear examples. When should I use one instead of a regular for loop?",
+    title: "Debits & credits",
+    prompt: "Explain debits and credits with clear examples. Why does debit mean different things for different account types?",
   },
   {
-    title: "OOP & classes",
-    prompt: "Walk me through Python classes step by step — __init__, self, inheritance, and when to use them.",
+    title: "Balance sheet",
+    prompt: "Walk me through the structure of a balance sheet — assets, liabilities, and equity — and how the accounting equation ties them together.",
   },
   {
-    title: "Error handling",
-    prompt: "How does try/except/finally work in Python? Show me examples covering common exceptions like ValueError, TypeError, and FileNotFoundError.",
+    title: "Income statement",
+    prompt: "What is the difference between gross profit, operating income, and net income? Show me how each is calculated.",
   },
   {
-    title: "Data structures",
-    prompt: "Explain the difference between Python lists, tuples, sets, and dictionaries with examples of when to use each.",
+    title: "Financial ratios",
+    prompt: "Explain the most important financial ratios — liquidity, profitability, and leverage — and what each tells us about a company.",
   },
   {
-    title: "Decorators",
-    prompt: "Help me understand Python decorators — what they are, how they work, and a practical example I can use today.",
+    title: "GAAP vs IFRS",
+    prompt: "What are the key differences between GAAP and IFRS? When does each apply and why does it matter?",
   },
   {
     title: "Quiz me",
-    prompt: "Quiz me on Python built-in functions — give me 5 short problems where I predict the output, then explain each answer.",
+    prompt: "Quiz me on basic accounting principles — give me 5 transaction scenarios and ask me how to record each one, then explain the correct entries.",
   },
 ];
 
@@ -204,7 +204,7 @@ export default function ChatPage() {
 
         const subject = activeThread?.subject ?? "General";
         const systemPrompt =
-          "You are a Python programming tutor. Your students are beginner to intermediate programmers learning Python. Focus on core syntax, data structures, algorithms, debugging, and best practices. Always explain with examples and check for understanding. When relevant, use structured formatting with headers, bullet points, and code blocks.";
+          "You are an accounting tutor. Your students are learners from beginner to intermediate level studying financial accounting, managerial accounting, and related topics. Focus on foundational concepts (debits/credits, financial statements, journal entries, the accounting equation), financial ratio analysis, GAAP and IFRS standards, and core accounting principles. Always explain with real-world examples and check for understanding. When relevant, use structured formatting with headers, bullet points, and tables.";
 
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -325,14 +325,14 @@ export default function ChatPage() {
               {/* Hero */}
               <div className="mb-8 text-center">
                 <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-600 shadow-lg shadow-emerald-900/40">
-                  <span className="text-3xl">🐍</span>
+                  <span className="text-3xl">📊</span>
                 </div>
                 <h2 className="text-xl font-bold text-slate-100 sm:text-2xl">
                   What would you like to learn?
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-400">
-                  Ask Python questions, walk through data structures and algorithms, or generate
-                  practice problems. Everything saves in{" "}
+                  Ask accounting questions, work through financial statements and journal entries, or
+                  generate practice problems. Everything saves in{" "}
                   <span className="font-medium text-slate-300">Threads</span>.
                 </p>
               </div>

@@ -8,16 +8,16 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "PyTutor — Learn Python with AI",
-    template: "%s — PyTutor",
+    default: "AcctTutor — Learn Accounting with AI",
+    template: "%s — AcctTutor",
   },
   description:
-    "Ask Python questions, walk through data structures and algorithms, or generate practice problems. Your personal AI-powered Python tutor.",
-  keywords: ["Python tutor", "learn Python", "Python programming", "coding education", "AI tutor", "Claude AI"],
-  authors: [{ name: "PyTutor" }],
+    "Ask accounting questions, work through financial statements, or generate practice problems. Your personal AI-powered accounting tutor.",
+  keywords: ["accounting tutor", "learn accounting", "financial accounting", "accounting education", "AI tutor", "Claude AI"],
+  authors: [{ name: "AcctTutor" }],
   openGraph: {
-    title: "PyTutor — Learn Python with AI",
-    description: "Your personal AI-powered Python programming tutor.",
+    title: "AcctTutor — Learn Accounting with AI",
+    description: "Your personal AI-powered accounting tutor.",
     type: "website",
   },
 };

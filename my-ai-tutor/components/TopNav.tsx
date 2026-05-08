@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Menu, MessageSquare, BookOpen, Wrench } from "lucide-react";
+import { BarChart2, Menu, MessageSquare, BookOpen, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -19,9 +19,9 @@ export default function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
       {/* Logo */}
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
-          <Bot className="h-5 w-5 text-white" />
+          <BarChart2 className="h-5 w-5 text-white" />
         </div>
-        <span className="hidden font-semibold text-slate-100 sm:block">PyTutor</span>
+        <span className="hidden font-semibold text-slate-100 sm:block">AcctTutor</span>
       </div>
 
       <div className="flex-1" />

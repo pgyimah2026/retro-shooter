@@ -377,7 +377,7 @@ function QuizTab() {
         onChange={setTopic}
         onGenerate={generate}
         loading={loading}
-        placeholder="e.g. List comprehensions, Decorators, OOP in Python…"
+        placeholder="e.g. Debits and credits, Balance sheet, Financial ratios…"
       />
       {error && <ErrorBanner message={error} />}
       {loading && <QuizSkeleton />}
@@ -397,7 +397,7 @@ function QuizTab() {
       )}
       {!quiz && !loading && !error && (
         <div className="mt-16 text-center text-sm text-slate-600">
-          Enter a Python topic above and click Generate to create a 5-question quiz.
+          Enter an accounting topic above and click Generate to create a 5-question quiz.
         </div>
       )}
     </div>
@@ -529,7 +529,7 @@ function FlashcardsTab() {
         onChange={setTopic}
         onGenerate={generate}
         loading={loading}
-        placeholder="e.g. Python data structures, Exception types, Built-in functions…"
+        placeholder="e.g. Accounting terminology, Financial ratios, GAAP principles…"
       />
       {error && <ErrorBanner message={error} />}
       {loading && <FlashcardSkeleton />}
@@ -549,7 +549,7 @@ function FlashcardsTab() {
       )}
       {!deck && !loading && !error && (
         <div className="mt-16 text-center text-sm text-slate-600">
-          Enter a Python topic above and click Generate to create 8 flashcards.
+          Enter an accounting topic above and click Generate to create 8 flashcards.
         </div>
       )}
     </div>
@@ -666,7 +666,7 @@ function CaseStudiesTab() {
         onChange={setTopic}
         onGenerate={generate}
         loading={loading}
-        placeholder="e.g. Debugging a memory leak, Refactoring nested loops, API design…"
+        placeholder="e.g. Recording a credit sale, Depreciation methods, Inventory valuation…"
       />
       {error && <ErrorBanner message={error} />}
       {loading && <CaseStudySkeleton />}
@@ -688,7 +688,7 @@ function CaseStudiesTab() {
       )}
       {!cs && !loading && !error && (
         <div className="mt-16 text-center text-sm text-slate-600">
-          Enter a Python scenario above and click Generate to create a case study with guided questions.
+          Enter an accounting scenario above and click Generate to create a case study with guided questions.
         </div>
       )}
     </div>
@@ -713,7 +713,7 @@ export default function StudyPage() {
       {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 sm:px-6 sm:py-4">
         <h1 className="text-sm font-semibold text-slate-100">Study</h1>
-        <p className="text-xs text-slate-500">AI-generated Python quizzes, flashcards, and case studies</p>
+        <p className="text-xs text-slate-500">AI-generated accounting quizzes, flashcards, and case studies</p>
       </div>
 
       {/* Tab bar — scrollable on very small screens */}
