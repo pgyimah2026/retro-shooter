@@ -20,7 +20,7 @@ function getCompleted(): Set<number> {
 }
 
 function persistCompleted(ids: Set<number>) {
-  localStorage.setItem(COMPLETION_KEY, JSON.stringify([...ids]));
+  localStorage.setItem(COMPLETION_KEY, JSON.stringify(Array.from(ids)));
 }
 
 // ─── Module data ──────────────────────────────────────────────────────────────
