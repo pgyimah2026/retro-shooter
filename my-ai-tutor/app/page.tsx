@@ -151,6 +151,16 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // "Study in Chat" starter sent from the Curriculum page via sessionStorage
+  useEffect(() => {
+    if (!isLoaded) return;
+    const starter = sessionStorage.getItem("accttutor-starter");
+    if (!starter) return;
+    sessionStorage.removeItem("accttutor-starter");
+    send(starter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
   // Auto-resize textarea
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);

@@ -235,9 +235,8 @@ function parseNum(v: string): number {
   return isNaN(n) ? NaN : n;
 }
 
-function fmt(n: number, decimals = 2): string {
-  if (!isFinite(n)) return "—";
-  return n.toFixed(decimals) + (decimals === 0 ? "" : "");
+function fmt(n: number): string {
+  return isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function ratioColor(label: string, value: number): string {
@@ -266,13 +265,13 @@ function FinancialRatioCalculator() {
   const gp = parseNum(inputs.grossProfit);
 
   const ratios = [
-    { label: "Current Ratio", formula: "Current Assets / Current Liabilities", value: ca / cl, suffix: "x", tip: "≥ 2 healthy" },
-    { label: "Quick Ratio", formula: "(Current Assets − Inventory) / Current Liabilities", value: (ca - inv) / cl, suffix: "x", tip: "≥ 1 healthy" },
-    { label: "Debt-to-Equity", formula: "Total Debt / Total Equity", value: debt / equity, suffix: "x", tip: "≤ 1 conservative" },
-    { label: "Return on Assets", formula: "Net Income / Total Assets × 100", value: (ni / ta) * 100, suffix: "%", tip: "Higher = better" },
-    { label: "Return on Equity", formula: "Net Income / Total Equity × 100", value: (ni / equity) * 100, suffix: "%", tip: "Higher = better" },
-    { label: "Net Profit Margin", formula: "Net Income / Revenue × 100", value: (ni / rev) * 100, suffix: "%", tip: "Higher = better" },
-    { label: "Gross Profit Margin", formula: "Gross Profit / Revenue × 100", value: (gp / rev) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Current Ratio", value: ca / cl, suffix: "x", tip: "≥ 2 healthy" },
+    { label: "Quick Ratio", value: (ca - inv) / cl, suffix: "x", tip: "≥ 1 healthy" },
+    { label: "Debt-to-Equity", value: debt / equity, suffix: "x", tip: "≤ 1 conservative" },
+    { label: "Return on Assets", value: (ni / ta) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Return on Equity", value: (ni / equity) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Net Profit Margin", value: (ni / rev) * 100, suffix: "%", tip: "Higher = better" },
+    { label: "Gross Profit Margin", value: (gp / rev) * 100, suffix: "%", tip: "Higher = better" },
   ];
 
   const fields: { key: keyof RatioInputs; label: string }[] = [
@@ -334,17 +333,66 @@ function FinancialRatioCalculator() {
   );
 }
 
-// ─── Tool 2: Journal Entry Helper (AI) ───────────────────────────────────────
+// ─── Tool 2: Journal Entry Helper — with T-account + practice mode ────────────
 
-function JournalEntryHelper() {
-  const [transaction, setTransaction] = useState("");
-  const { result, loading, error, stream, reset } = useToolStream();
+interface JournalRow {
+  account: string;
+  debit: string;
+  credit: string;
+}
 
-  async function generate() {
-    if (!transaction.trim() || loading) return;
-    await stream(
-      `Transaction: "${transaction.trim()}"`,
-      `You are an accounting tutor specializing in journal entries. The user will describe a business transaction. Generate the correct journal entry using this exact markdown format:
+function parseJournalTable(markdown: string): JournalRow[] {
+  const rows: JournalRow[] = [];
+  const lines = markdown.split("\n");
+  let inTable = false;
+
+  for (const line of lines) {
+    if (!line.includes("|")) { inTable = false; continue; }
+    const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+    if (cells.length < 3) continue;
+    if (cells[0].toLowerCase() === "account" && cells[1].toLowerCase().includes("debit")) {
+      inTable = true;
+      continue;
+    }
+    if (inTable && cells.every((c) => /^[-:\s]+$/.test(c))) continue;
+    if (inTable) rows.push({ account: cells[0], debit: cells[1], credit: cells[2] });
+  }
+  return rows;
+}
+
+function TAccountView({ rows }: { rows: JournalRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">T-Account View</p>
+      <div className="flex flex-wrap gap-3">
+        {rows.map((row, i) => (
+          <div key={i} className="min-w-[110px] overflow-hidden rounded-xl border border-slate-700 bg-slate-800/40 text-center">
+            <div className="border-b border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              {row.account}
+            </div>
+            <div className="flex divide-x divide-slate-700">
+              <div className="flex-1 px-2 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Dr</p>
+                <p className={cn("mt-0.5 font-mono text-xs font-bold", row.debit !== "—" ? "text-emerald-400" : "text-slate-700")}>
+                  {row.debit}
+                </p>
+              </div>
+              <div className="flex-1 px-2 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Cr</p>
+                <p className={cn("mt-0.5 font-mono text-xs font-bold", row.credit !== "—" ? "text-blue-400" : "text-slate-700")}>
+                  {row.credit}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const JOURNAL_SYSTEM = `You are an accounting tutor specialising in journal entries. The user will describe a business transaction. Generate the correct journal entry using this exact markdown format:
 
 ## Journal Entry
 
@@ -353,58 +401,132 @@ function JournalEntryHelper() {
 | Account Name | amount or — | amount or — |
 
 Rules:
-- Use "—" in a cell when no amount applies for that side
+- Use "—" when no amount applies for that side
 - List debits first, then credits
-- Indent credit account names with two spaces as per accounting convention (e.g. "  Cash")
+- Indent credit account names with two spaces (e.g. "  Cash")
 - Use real account names (e.g. Accounts Receivable, Revenue, Cash, Inventory)
 
 After the table, add:
 ## Explanation
-A 2–3 sentence plain-English explanation of why each account is debited or credited, referencing the accounting equation or double-entry principles.
+A 2–3 sentence plain-English explanation of why each account is debited or credited.`;
 
-Keep it concise and educational.`
+const GRADE_SYSTEM = `You are an accounting tutor grading a student's journal entry attempt.
+
+The user provides a transaction and their attempted entry. Respond with exactly these sections:
+
+## Correct Journal Entry
+A markdown table: | Account | Debit ($) | Credit ($) |
+
+## Grading
+Go through the student's attempt line by line. Mark each line ✓ correct or ✗ incorrect with a brief reason.
+
+## Score
+X / Y entries correct.
+
+## Key Takeaway
+One sentence on the accounting principle this transaction demonstrates.
+
+Be encouraging but precise.`;
+
+function JournalEntryHelper() {
+  const [transaction, setTransaction] = useState("");
+  const [mode, setMode] = useState<"show" | "practice">("show");
+  const [attempt, setAttempt] = useState("");
+  const { result, loading, error, stream, reset } = useToolStream();
+
+  const journalRows = result && !loading ? parseJournalTable(result) : [];
+
+  function resetTool() {
+    reset();
+    setAttempt("");
+  }
+
+  async function generate() {
+    if (!transaction.trim() || loading) return;
+    await stream(`Transaction: "${transaction.trim()}"`, JOURNAL_SYSTEM);
+  }
+
+  async function checkAnswer() {
+    if (!transaction.trim() || !attempt.trim() || loading) return;
+    await stream(
+      `Transaction: "${transaction.trim()}"\n\nMy journal entry attempt:\n${attempt.trim()}`,
+      GRADE_SYSTEM
     );
   }
 
   return (
     <div className="space-y-3">
+      {/* Mode toggle */}
+      <div className="flex gap-0.5 rounded-xl border border-slate-700 bg-slate-800/40 p-0.5">
+        {(["show", "practice"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); resetTool(); }}
+            className={cn(
+              "flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors",
+              mode === m
+                ? m === "practice" ? "bg-purple-600 text-white" : "bg-slate-700 text-slate-100"
+                : "text-slate-500 hover:text-slate-300"
+            )}
+          >
+            {m === "show" ? "Show Answer" : "Practice Mode"}
+          </button>
+        ))}
+      </div>
+
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-400">
-          Describe the transaction
-        </label>
+        <label className="mb-1 block text-xs font-medium text-slate-400">Describe the transaction</label>
         <textarea
           value={transaction}
-          onChange={(e) => { setTransaction(e.target.value); reset(); }}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), generate())}
+          onChange={(e) => { setTransaction(e.target.value); resetTool(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && mode === "show") { e.preventDefault(); generate(); } }}
           placeholder="e.g. Purchased $5,000 of office equipment on credit"
-          rows={3}
-          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
+          rows={2}
+          disabled={loading}
+          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 disabled:opacity-50"
         />
       </div>
 
-      <GenerateButton
-        onClick={generate}
-        loading={loading}
-        disabled={!transaction.trim()}
-        loadingLabel="Building entry…"
-        label="Generate Journal Entry"
-        color="emerald"
-      />
+      {mode === "practice" && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-400">
+            Your journal entry attempt
+          </label>
+          <textarea
+            value={attempt}
+            onChange={(e) => setAttempt(e.target.value)}
+            placeholder={"Dr  Office Equipment    5,000\n    Cr  Accounts Payable   5,000"}
+            rows={4}
+            disabled={loading}
+            className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 font-mono text-xs text-slate-100 placeholder-slate-600 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 disabled:opacity-50"
+          />
+        </div>
+      )}
+
+      {mode === "show" ? (
+        <GenerateButton onClick={generate} loading={loading} disabled={!transaction.trim()} loadingLabel="Building entry…" label="Generate Journal Entry" color="emerald" />
+      ) : (
+        <GenerateButton onClick={checkAnswer} loading={loading} disabled={!transaction.trim() || !attempt.trim()} loadingLabel="Grading…" label="Check My Answer" color="purple" />
+      )}
 
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       {result && (
-        <ResultBox copyText={result} className="border-emerald-900/40 bg-emerald-900/10">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>
-            {result}
-          </ReactMarkdown>
-        </ResultBox>
+        <>
+          <ResultBox
+            copyText={result}
+            className={mode === "practice" ? "border-purple-900/40 bg-purple-900/10" : "border-emerald-900/40 bg-emerald-900/10"}
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>{result}</ReactMarkdown>
+          </ResultBox>
+          {mode === "show" && <TAccountView rows={journalRows} />}
+        </>
       )}
     </div>
   );
 }
 
-// ─── Tool 3: Concept Comparator (AI) ─────────────────────────────────────────
+// ─── Tool 3: Concept Comparator ───────────────────────────────────────────────
 
 function ConceptComparator() {
   const [conceptA, setConceptA] = useState("");
@@ -417,13 +539,13 @@ function ConceptComparator() {
       `Compare "${conceptA.trim()}" vs "${conceptB.trim()}" in accounting`,
       `You are an accounting expert creating a structured comparison for students.
 
-Generate a clear markdown comparison between the two accounting concepts the user provides.
+Generate a clear markdown comparison between the two accounting concepts.
 
 Format:
 1. One-sentence intro contextualising both concepts
-2. A markdown table with columns: Aspect | ${conceptA} | ${conceptB}
-   Include these rows: Definition, Key Feature, When Used, Example, Advantage, Common Pitfall
-3. A bold **Key Takeaway** line with the single most important distinction
+2. A markdown table: Aspect | ${conceptA} | ${conceptB}
+   Rows: Definition, Key Feature, When Used, Example, Advantage, Common Pitfall
+3. A bold **Key Takeaway** with the single most important distinction
 
 Keep table cells concise (1–2 sentences). No preamble before the intro.`
     );
@@ -466,16 +588,14 @@ Keep table cells concise (1–2 sentences). No preamble before the intro.`
 
       {result && (
         <ResultBox copyText={result}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>
-            {result}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>{result}</ReactMarkdown>
         </ResultBox>
       )}
     </div>
   );
 }
 
-// ─── Tool 4: Financial Statement Analyzer (AI) ───────────────────────────────
+// ─── Tool 4: Financial Statement Analyzer ────────────────────────────────────
 
 function StatementAnalyzer() {
   const [scenario, setScenario] = useState("");
@@ -486,23 +606,23 @@ function StatementAnalyzer() {
     if (!scenario.trim() || loading) return;
     await stream(
       scenario.trim(),
-      `You are an accounting tutor helping students understand financial statements and scenarios.
+      `You are an accounting tutor helping students understand financial statements.
 
-The user will describe a financial statement, a set of figures, or an accounting scenario. Analyze it using exactly these markdown sections:
+The user will describe a financial statement or scenario. Analyze it using exactly these sections:
 
 ## Key Observations
 2–4 bullet points identifying the most important figures or patterns.
 
 ## Ratio Highlights
-Calculate and interpret any relevant ratios you can derive from the data provided (e.g. liquidity, profitability, leverage). If numbers are not present, explain which ratios would apply and why.
+Calculate and interpret any relevant ratios derivable from the data. If numbers aren't present, name the ratios that would apply and why.
 
 ## Areas of Concern
-1–3 bullet points flagging potential issues, red flags, or items that warrant further investigation.
+1–3 bullet points flagging potential issues or red flags.
 
 ## Learning Takeaways
-1–2 sentences summarizing what an accounting student should learn from this scenario.
+1–2 sentences summarizing what an accounting student should take away.
 
-Keep each section concise (2–4 sentences or bullet points). If the input is not financial in nature, politely redirect.`
+Keep sections concise. If the input is not financial, politely redirect.`
     );
   }
 
@@ -540,9 +660,7 @@ Keep each section concise (2–4 sentences or bullet points). If the input is no
 
       {result && (
         <ResultBox copyText={result} className="border-blue-900/40 bg-blue-900/10">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>
-            {result}
-          </ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={proseMd}>{result}</ReactMarkdown>
         </ResultBox>
       )}
     </div>
@@ -555,32 +673,28 @@ const TOOLS = [
   {
     icon: BarChart2,
     title: "Financial Ratio Calculator",
-    description:
-      "Enter balance sheet and income statement figures to instantly compute key liquidity, profitability, and leverage ratios.",
+    description: "Enter balance sheet and income statement figures to instantly compute key liquidity, profitability, and leverage ratios.",
     accent: "bg-emerald-600",
     component: FinancialRatioCalculator,
   },
   {
     icon: BookOpen,
     title: "Journal Entry Helper",
-    description:
-      "Describe any business transaction and Claude generates the correct double-entry journal entry with a plain-English explanation.",
+    description: "Describe any transaction — get the correct double-entry journal with a T-account view. Switch to Practice Mode to attempt entries yourself and get graded.",
     accent: "bg-emerald-600",
     component: JournalEntryHelper,
   },
   {
     icon: ArrowLeftRight,
     title: "Concept Comparator",
-    description:
-      "Enter any two accounting concepts and Claude builds a structured side-by-side comparison table with examples.",
+    description: "Enter any two accounting concepts and Claude builds a structured side-by-side comparison table with examples.",
     accent: "bg-indigo-600",
     component: ConceptComparator,
   },
   {
     icon: FileText,
     title: "Statement Analyzer",
-    description:
-      "Paste financial figures or describe a scenario and Claude identifies key observations, ratios, and red flags.",
+    description: "Paste financial figures or describe a scenario and Claude identifies key observations, ratios, and red flags.",
     accent: "bg-blue-600",
     component: StatementAnalyzer,
   },

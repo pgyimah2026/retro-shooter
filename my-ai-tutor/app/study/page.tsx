@@ -1,19 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   RotateCcw,
   CheckCircle2,
   XCircle,
   ChevronDown,
   ChevronUp,
   Sparkles,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// ─── Quiz history ─────────────────────────────────────────────────────────────
+
+const QUIZ_HISTORY_KEY = "accttutor-quiz-history";
+
+interface QuizScore {
+  topic: string;
+  score: number;
+  total: number;
+  pct: number;
+  date: string;
+}
+
+function getQuizHistory(): QuizScore[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(QUIZ_HISTORY_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveQuizScore(entry: QuizScore) {
+  const history = getQuizHistory();
+  localStorage.setItem(
+    QUIZ_HISTORY_KEY,
+    JSON.stringify([entry, ...history].slice(0, 20))
+  );
+}
 
 // ─── Skeleton shapes ──────────────────────────────────────────────────────────
 
@@ -33,15 +61,9 @@ function FlashcardSkeleton() {
   return (
     <div className="mt-6 animate-fade-in space-y-5">
       <Skeleton className="h-56 w-full rounded-2xl" />
-      <div className="flex justify-center gap-1.5">
-        {[...Array(8)].map((_, i) => (
-          <Skeleton key={i} className="h-1.5 w-1.5 rounded-full" />
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-9 w-28 rounded-xl" />
-        <Skeleton className="h-4 w-12" />
-        <Skeleton className="h-9 w-28 rounded-xl" />
+      <div className="grid grid-cols-2 gap-3">
+        <Skeleton className="h-11 rounded-xl" />
+        <Skeleton className="h-11 rounded-xl" />
       </div>
     </div>
   );
@@ -60,7 +82,7 @@ function CaseStudySkeleton() {
   );
 }
 
-// ─── Local types ─────────────────────────────────────────────────────────────
+// ─── Local types ──────────────────────────────────────────────────────────────
 
 interface QuizQuestion {
   id: number;
@@ -160,11 +182,13 @@ function ErrorBanner({ message }: { message: string }) {
 function ScoreSummary({
   score,
   total,
+  topic,
   onRetry,
   onNew,
 }: {
   score: number;
   total: number;
+  topic: string;
   onRetry: () => void;
   onNew: () => void;
 }) {
@@ -177,6 +201,11 @@ function ScoreSummary({
       : pct >= 60
       ? "Good effort! A bit more practice and you'll nail it."
       : "Keep studying — every attempt builds understanding.";
+
+  useEffect(() => {
+    saveQuizScore({ topic, score, total, pct, date: new Date().toISOString() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col items-center py-10">
@@ -214,13 +243,7 @@ function ScoreSummary({
   );
 }
 
-function QuizView({
-  quiz,
-  onReset,
-}: {
-  quiz: Quiz;
-  onReset: () => void;
-}) {
+function QuizView({ quiz, onReset }: { quiz: Quiz; onReset: () => void }) {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [done, setDone] = useState(false);
@@ -245,11 +268,8 @@ function QuizView({
       <ScoreSummary
         score={score}
         total={quiz.questions.length}
-        onRetry={() => {
-          setAnswers({});
-          setCurrent(0);
-          setDone(false);
-        }}
+        topic={quiz.topic}
+        onRetry={() => { setAnswers({}); setCurrent(0); setDone(false); }}
         onNew={onReset}
       />
     );
@@ -270,10 +290,8 @@ function QuizView({
         </span>
       </div>
 
-      {/* Question */}
       <p className="mb-6 text-base font-medium leading-relaxed text-slate-100">{q.question}</p>
 
-      {/* Options */}
       <div className="space-y-3">
         {(["A", "B", "C", "D"] as const).map((key) => {
           const isCorrect = key === q.correct;
@@ -285,14 +303,10 @@ function QuizView({
               disabled={answered}
               className={cn(
                 "flex w-full items-start gap-3 rounded-xl border px-4 py-3.5 text-left text-sm transition-all",
-                !answered &&
-                  "border-slate-700 bg-slate-800/60 text-slate-300 hover:border-emerald-600/60 hover:bg-slate-800 hover:text-slate-100",
-                answered && isCorrect &&
-                  "border-green-600 bg-green-900/30 text-green-300",
-                answered && isSelected && !isCorrect &&
-                  "border-red-600 bg-red-900/30 text-red-300",
-                answered && !isSelected && !isCorrect &&
-                  "border-slate-800 bg-slate-800/30 text-slate-600"
+                !answered && "border-slate-700 bg-slate-800/60 text-slate-300 hover:border-emerald-600/60 hover:bg-slate-800 hover:text-slate-100",
+                answered && isCorrect && "border-green-600 bg-green-900/30 text-green-300",
+                answered && isSelected && !isCorrect && "border-red-600 bg-red-900/30 text-red-300",
+                answered && !isSelected && !isCorrect && "border-slate-800 bg-slate-800/30 text-slate-600"
               )}
             >
               <span
@@ -307,28 +321,20 @@ function QuizView({
                 {key}
               </span>
               <span className="leading-relaxed">{q.options[key]}</span>
-              {answered && isCorrect && (
-                <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-green-400" />
-              )}
-              {answered && isSelected && !isCorrect && (
-                <XCircle className="ml-auto h-4 w-4 shrink-0 text-red-400" />
-              )}
+              {answered && isCorrect && <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-green-400" />}
+              {answered && isSelected && !isCorrect && <XCircle className="ml-auto h-4 w-4 shrink-0 text-red-400" />}
             </button>
           );
         })}
       </div>
 
-      {/* Explanation */}
       {answered && (
         <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Explanation
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Explanation</p>
           <p className="mt-1 text-sm leading-relaxed text-slate-300">{q.explanation}</p>
         </div>
       )}
 
-      {/* Next button */}
       {answered && (
         <div className="mt-6 flex justify-end">
           <button
@@ -337,6 +343,55 @@ function QuizView({
           >
             {current < quiz.questions.length - 1 ? "Next Question →" : "See Results →"}
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuizHistory() {
+  const [history, setHistory] = useState<QuizScore[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setHistory(getQuizHistory());
+  }, []);
+
+  if (history.length === 0) return null;
+
+  return (
+    <div className="mt-8 border-t border-slate-800 pt-6">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300"
+      >
+        <History className="h-3.5 w-3.5" />
+        Recent Scores ({history.length})
+        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="mt-3 space-y-1.5">
+          {history.map((h, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/40 px-3 py-2"
+            >
+              <div>
+                <p className="text-xs font-medium text-slate-300">{h.topic}</p>
+                <p className="text-[10px] text-slate-600">
+                  {new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "font-mono text-xs font-bold",
+                  h.pct >= 80 ? "text-green-400" : h.pct >= 60 ? "text-yellow-400" : "text-red-400"
+                )}
+              >
+                {h.score}/{h.total} ({h.pct}%)
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -385,10 +440,7 @@ function QuizTab() {
         <div className="mt-8 animate-fade-in">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="font-semibold text-slate-100">{quiz.topic}</h3>
-            <button
-              onClick={() => setQuiz(null)}
-              className="text-xs text-slate-500 hover:text-slate-300"
-            >
+            <button onClick={() => setQuiz(null)} className="text-xs text-slate-500 hover:text-slate-300">
               ← Change topic
             </button>
           </div>
@@ -400,26 +452,83 @@ function QuizTab() {
           Enter an accounting topic above and click Generate to create a 5-question quiz.
         </div>
       )}
+      <QuizHistory />
     </div>
   );
 }
 
-// ─── Flashcards tab ──────────────────────────────────────────────────────────
+// ─── Flashcards tab — spaced repetition ──────────────────────────────────────
 
-function FlashcardView({ deck }: { deck: FlashcardDeck }) {
-  const [current, setCurrent] = useState(0);
+function FlashcardView({ deck, onNewDeck }: { deck: FlashcardDeck; onNewDeck: () => void }) {
+  const [remaining, setRemaining] = useState(() => deck.cards.map((c) => c.id));
+  const [mastered, setMastered] = useState<number[]>([]);
   const [flipped, setFlipped] = useState(false);
 
-  const card = deck.cards[current];
   const total = deck.cards.length;
+  const done = remaining.length === 0;
+  const card = done ? null : deck.cards.find((c) => c.id === remaining[0])!;
 
-  function go(dir: -1 | 1) {
-    setCurrent((c) => c + dir);
+  function gotIt() {
+    setMastered((prev) => [...prev, remaining[0]]);
+    setRemaining((prev) => prev.slice(1));
     setFlipped(false);
   }
 
+  function stillLearning() {
+    setRemaining((prev) => [...prev.slice(1), prev[0]]);
+    setFlipped(false);
+  }
+
+  function restart() {
+    setRemaining(deck.cards.map((c) => c.id));
+    setMastered([]);
+    setFlipped(false);
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col items-center py-10">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-emerald-900/40 text-2xl font-bold text-emerald-400 ring-4 ring-emerald-600/40">
+          {total}/{total}
+        </div>
+        <p className="mt-5 text-lg font-semibold text-slate-100">Deck Complete!</p>
+        <p className="mt-1 text-sm text-slate-500">You mastered all {total} cards.</p>
+        <div className="mt-8 flex gap-3">
+          <button
+            onClick={restart}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:text-slate-100"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restart
+          </button>
+          <button
+            onClick={onNewDeck}
+            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+          >
+            <Sparkles className="h-4 w-4" />
+            New Deck
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = mastered.length / total;
+
   return (
     <div>
+      {/* Progress bar */}
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex-1 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className="h-1.5 rounded-full bg-emerald-600 transition-all duration-300"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+        <span className="shrink-0 text-xs text-slate-500">{mastered.length}/{total} mastered</span>
+        <span className="shrink-0 text-xs text-slate-600">{remaining.length} left</span>
+      </div>
+
       {/* Card */}
       <div
         className="cursor-pointer [perspective:1200px]"
@@ -432,63 +541,39 @@ function FlashcardView({ deck }: { deck: FlashcardDeck }) {
             flipped && "[transform:rotateY(180deg)]"
           )}
         >
-          {/* Front */}
           <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 px-8 py-6 [backface-visibility:hidden]">
             <span className="mb-3 rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-400">
               Term
             </span>
-            <p className="text-center text-lg font-semibold leading-snug text-slate-100">
-              {card.front}
-            </p>
+            <p className="text-center text-lg font-semibold leading-snug text-slate-100">{card!.front}</p>
             <p className="mt-4 text-xs text-slate-600">Click to reveal answer</p>
           </div>
-          {/* Back */}
           <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-emerald-700/50 bg-emerald-900/30 px-8 py-6 [backface-visibility:hidden] [transform:rotateY(180deg)]">
             <span className="mb-3 rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-400">
               Answer
             </span>
-            <p className="text-center text-sm leading-relaxed text-slate-200">{card.back}</p>
+            <p className="text-center text-sm leading-relaxed text-slate-200">{card!.back}</p>
           </div>
         </div>
       </div>
 
-      {/* Progress dots */}
-      <div className="mt-5 flex justify-center gap-1.5">
-        {deck.cards.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              setCurrent(i);
-              setFlipped(false);
-            }}
-            className={cn(
-              "h-1.5 rounded-full transition-all",
-              i === current ? "w-5 bg-emerald-500" : "w-1.5 bg-slate-700 hover:bg-slate-600"
-            )}
-          />
-        ))}
-      </div>
+      <p className="mt-3 text-center text-xs text-slate-600">Flip the card, then rate yourself below</p>
 
-      {/* Navigation */}
-      <div className="mt-5 flex items-center justify-between">
+      {/* Spaced repetition buttons */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
         <button
-          onClick={() => go(-1)}
-          disabled={current === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          onClick={stillLearning}
+          className="flex items-center justify-center gap-2 rounded-xl border border-orange-800/50 bg-orange-900/20 px-4 py-3 text-sm font-medium text-orange-300 transition-colors hover:bg-orange-900/40"
         >
-          <ChevronLeft className="h-4 w-4" />
-          Previous
+          <RotateCcw className="h-4 w-4" />
+          Still Learning
         </button>
-        <span className="text-sm text-slate-500">
-          {current + 1} / {total}
-        </span>
         <button
-          onClick={() => go(1)}
-          disabled={current === total - 1}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          onClick={gotIt}
+          className="flex items-center justify-center gap-2 rounded-xl border border-green-800/50 bg-green-900/20 px-4 py-3 text-sm font-medium text-green-300 transition-colors hover:bg-green-900/40"
         >
-          Next
-          <ChevronRight className="h-4 w-4" />
+          <CheckCircle2 className="h-4 w-4" />
+          Got It ✓
         </button>
       </div>
     </div>
@@ -537,14 +622,11 @@ function FlashcardsTab() {
         <div className="mt-8 animate-fade-in">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="font-semibold text-slate-100">{deck.topic}</h3>
-            <button
-              onClick={() => setDeck(null)}
-              className="text-xs text-slate-500 hover:text-slate-300"
-            >
+            <button onClick={() => setDeck(null)} className="text-xs text-slate-500 hover:text-slate-300">
               ← Change topic
             </button>
           </div>
-          <FlashcardView key={deck.topic} deck={deck} />
+          <FlashcardView key={deck.topic} deck={deck} onNewDeck={() => setDeck(null)} />
         </div>
       )}
       {!deck && !loading && !error && (
@@ -571,48 +653,31 @@ function CaseStudyView({ cs }: { cs: CaseStudy }) {
 
   return (
     <div>
-      {/* Title & scenario */}
       <h3 className="text-lg font-bold text-slate-100">{cs.title}</h3>
       <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-800/60 p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Scenario</p>
-        <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-slate-300">
-          {cs.scenario}
-        </p>
+        <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-slate-300">{cs.scenario}</p>
       </div>
 
-      {/* Guided questions */}
       <div className="mt-6 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Guided Questions
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Guided Questions</p>
         {cs.questions.map((q) => {
           const open = expanded.has(q.id);
           return (
-            <div
-              key={q.id}
-              className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/40"
-            >
+            <div key={q.id} className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/40">
               <div className="flex items-start gap-3 p-4">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600/20 text-xs font-bold text-emerald-400">
                   {q.id}
                 </span>
-                <p className="flex-1 text-sm font-medium leading-relaxed text-slate-200">
-                  {q.question}
-                </p>
+                <p className="flex-1 text-sm font-medium leading-relaxed text-slate-200">{q.question}</p>
                 <button
                   onClick={() => toggle(q.id)}
                   className="ml-2 flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-200"
                 >
                   {open ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                      Hide Analysis
-                    </>
+                    <><ChevronUp className="h-3.5 w-3.5" />Hide Analysis</>
                   ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                      Show Analysis
-                    </>
+                    <><ChevronDown className="h-3.5 w-3.5" />Show Analysis</>
                   )}
                 </button>
               </div>
@@ -673,13 +738,8 @@ function CaseStudiesTab() {
       {cs && !loading && (
         <div className="mt-8 animate-fade-in">
           <div className="mb-4 flex items-center justify-between">
-            <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-400">
-              {cs.topic}
-            </span>
-            <button
-              onClick={() => setCs(null)}
-              className="text-xs text-slate-500 hover:text-slate-300"
-            >
+            <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-400">{cs.topic}</span>
+            <button onClick={() => setCs(null)} className="text-xs text-slate-500 hover:text-slate-300">
               ← Change topic
             </button>
           </div>
@@ -710,13 +770,11 @@ export default function StudyPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 sm:px-6 sm:py-4">
         <h1 className="text-sm font-semibold text-slate-100">Study</h1>
         <p className="text-xs text-slate-500">AI-generated accounting quizzes, flashcards, and case studies</p>
       </div>
 
-      {/* Tab bar — scrollable on very small screens */}
       <div className="shrink-0 overflow-x-auto border-b border-slate-800 px-2 sm:px-4">
         <div className="flex min-w-max gap-0.5">
           {TABS.map(({ id, label, emoji }) => (
@@ -737,7 +795,6 @@ export default function StudyPage() {
         </div>
       </div>
 
-      {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-2xl">
           {tab === "quizzes" && <QuizTab />}

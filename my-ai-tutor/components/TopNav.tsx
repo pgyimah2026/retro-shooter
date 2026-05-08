@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Menu, MessageSquare, BookOpen, Wrench } from "lucide-react";
+import { BarChart2, GraduationCap, Menu, MessageSquare, BookOpen, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Chat", icon: MessageSquare },
   { href: "/study", label: "Study", icon: BookOpen },
   { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/curriculum", label: "Curriculum", icon: GraduationCap },
 ];
 
 export default function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
