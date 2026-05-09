@@ -31,7 +31,7 @@ export default function Sidebar({ mode, setMode, activePage, setActivePage, open
             <span className="text-white text-sm font-bold">$</span>
           </div>
           <div>
-            <span className="text-gray-900 font-semibold text-sm">TPS Tax IQ</span>
+            <span className="text-gray-900 font-semibold text-sm">Tax IQ</span>
             <p className="text-xs text-gray-400 leading-tight">{TAX_YEAR} Tax Year</p>
           </div>
         </div>
