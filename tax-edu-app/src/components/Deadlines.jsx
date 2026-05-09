@@ -33,7 +33,7 @@ const INDIVIDUAL_DEADLINES = [
     status: 'passed',
   },
   {
-    date: 'Jun 16, 2026',
+    date: 'Jun 15, 2026',
     label: 'Q2 2026 Estimated Tax Payment',
     description: 'Second quarterly estimated tax payment. Covers income from Apr 1 – May 31.',
     status: 'coming-up',
@@ -96,7 +96,7 @@ const BUSINESS_DEADLINES = [
     status: 'passed',
   },
   {
-    date: 'Jun 16, 2026',
+    date: 'Jun 15, 2026',
     label: 'Q2 2026 Estimated Tax',
     description: 'Second quarterly estimated tax payment for businesses.',
     status: 'coming-up',

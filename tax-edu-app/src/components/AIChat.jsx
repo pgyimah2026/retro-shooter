@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, AlertCircle } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const SUGGESTIONS = {
   individual: [
@@ -18,6 +20,31 @@ const SUGGESTIONS = {
   ],
 }
 
+const mdComponents = {
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  h1: ({ children }) => <h1 className="text-base font-bold text-gray-900 mt-3 mb-1 first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="text-sm font-bold text-gray-900 mt-3 mb-1 first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="text-sm font-semibold text-gray-800 mt-2 mb-0.5 first:mt-0">{children}</h3>,
+  ul: ({ children }) => <ul className="list-disc list-outside pl-4 mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal list-outside pl-4 mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  hr: () => <hr className="my-3 border-gray-200" />,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-[#1D9E75] pl-3 my-2 text-gray-600 italic">{children}</blockquote>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-3">
+      <table className="w-full text-xs border-collapse">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-gray-100">{children}</thead>,
+  th: ({ children }) => <th className="text-left px-3 py-1.5 font-semibold text-gray-700 border border-gray-200">{children}</th>,
+  td: ({ children }) => <td className="px-3 py-1.5 border border-gray-200 text-gray-700">{children}</td>,
+  code: ({ children }) => <code className="bg-gray-100 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+}
+
 function MessageBubble({ message }) {
   const isUser = message.role === 'user'
 
@@ -30,18 +57,24 @@ function MessageBubble({ message }) {
         {isUser ? <User size={14} className="text-gray-600" /> : <Bot size={14} className="text-white" />}
       </div>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
           isUser
-            ? 'bg-gray-100 text-gray-900 rounded-tr-sm'
+            ? 'bg-gray-100 text-gray-900 rounded-tr-sm leading-relaxed'
             : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
         }`}
       >
-        {message.content || (
+        {!message.content ? (
           <span className="flex gap-1 items-center">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
           </span>
+        ) : isUser ? (
+          message.content
+        ) : (
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+            {message.content}
+          </ReactMarkdown>
         )}
       </div>
     </div>

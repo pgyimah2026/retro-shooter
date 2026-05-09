@@ -1,36 +1,39 @@
 import { useState, useMemo } from 'react'
 
+// 2026 tax brackets — IRS Rev. Proc. 2025-29 (includes One Big Beautiful Bill)
 const BRACKETS = {
   single: [
-    { rate: 0.10, min: 0, max: 11600 },
-    { rate: 0.12, min: 11600, max: 47150 },
-    { rate: 0.22, min: 47150, max: 100525 },
-    { rate: 0.24, min: 100525, max: 191950 },
-    { rate: 0.32, min: 191950, max: 243725 },
-    { rate: 0.35, min: 243725, max: 609350 },
-    { rate: 0.37, min: 609350, max: Infinity },
+    { rate: 0.10, min: 0,       max: 12400 },
+    { rate: 0.12, min: 12400,   max: 50400 },
+    { rate: 0.22, min: 50400,   max: 105700 },
+    { rate: 0.24, min: 105700,  max: 201775 },
+    { rate: 0.32, min: 201775,  max: 256225 },
+    { rate: 0.35, min: 256225,  max: 640600 },
+    { rate: 0.37, min: 640600,  max: Infinity },
   ],
   mfj: [
-    { rate: 0.10, min: 0, max: 23200 },
-    { rate: 0.12, min: 23200, max: 94300 },
-    { rate: 0.22, min: 94300, max: 201050 },
-    { rate: 0.24, min: 201050, max: 383900 },
-    { rate: 0.32, min: 383900, max: 487450 },
-    { rate: 0.35, min: 487450, max: 731200 },
-    { rate: 0.37, min: 731200, max: Infinity },
+    { rate: 0.10, min: 0,       max: 24800 },
+    { rate: 0.12, min: 24800,   max: 100800 },
+    { rate: 0.22, min: 100800,  max: 211400 },
+    { rate: 0.24, min: 211400,  max: 403550 },
+    { rate: 0.32, min: 403550,  max: 512450 },
+    { rate: 0.35, min: 512450,  max: 768700 },
+    { rate: 0.37, min: 768700,  max: Infinity },
   ],
   hoh: [
-    { rate: 0.10, min: 0, max: 16550 },
-    { rate: 0.12, min: 16550, max: 63100 },
-    { rate: 0.22, min: 63100, max: 100500 },
-    { rate: 0.24, min: 100500, max: 191950 },
-    { rate: 0.32, min: 191950, max: 243700 },
-    { rate: 0.35, min: 243700, max: 609350 },
-    { rate: 0.37, min: 609350, max: Infinity },
+    // 10% & 12% thresholds are IRS-estimated; 22%+ are official
+    { rate: 0.10, min: 0,       max: 17700 },
+    { rate: 0.12, min: 17700,   max: 67450 },
+    { rate: 0.22, min: 67450,   max: 105700 },
+    { rate: 0.24, min: 105700,  max: 201775 },
+    { rate: 0.32, min: 201775,  max: 256225 },
+    { rate: 0.35, min: 256225,  max: 640600 },
+    { rate: 0.37, min: 640600,  max: Infinity },
   ],
 }
 
-const STANDARD_DEDUCTIONS = { single: 14600, mfj: 29200, hoh: 21900 }
+// 2026 standard deductions — IRS Rev. Proc. 2025-29
+const STANDARD_DEDUCTIONS = { single: 16100, mfj: 32200, hoh: 24150 }
 
 const STATUS_LABELS = { single: 'Single', mfj: 'Married Filing Jointly', hoh: 'Head of Household' }
 
@@ -56,6 +59,8 @@ function calcTax(taxableIncome, brackets) {
 
   return { tax, breakdown }
 }
+
+const TAX_YEAR = new Date().getFullYear() - 1
 
 export default function TaxCalculator() {
   const [status, setStatus] = useState('single')
@@ -95,7 +100,7 @@ export default function TaxCalculator() {
     <div className="max-w-3xl space-y-6">
       {/* Inputs card */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-5">2024 Federal Tax Estimator</h2>
+        <h2 className="text-base font-semibold text-gray-900 mb-5">2026 Federal Tax Estimator</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Filing status */}

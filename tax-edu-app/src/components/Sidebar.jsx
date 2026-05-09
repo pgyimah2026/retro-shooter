@@ -1,11 +1,14 @@
-import { BookOpen, Calculator, Calendar, MessageCircle } from 'lucide-react'
+import { BookOpen, Calculator, Calendar, MessageCircle, Target } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { id: 'guides', icon: BookOpen, label: 'Tax Guides' },
-  { id: 'calculator', icon: Calculator, label: 'Tax Calculator' },
-  { id: 'deadlines', icon: Calendar, label: 'Key Deadlines' },
-  { id: 'chat', icon: MessageCircle, label: 'Ask AI' },
+  { id: 'guides',     icon: BookOpen,      label: 'Tax Guides' },
+  { id: 'calculator', icon: Calculator,    label: 'Tax Calculator' },
+  { id: 'planning',   icon: Target,        label: 'Tax Planning' },
+  { id: 'deadlines',  icon: Calendar,      label: 'Key Deadlines' },
+  { id: 'chat',       icon: MessageCircle, label: 'Ask AI' },
 ]
+
+const TAX_YEAR = new Date().getFullYear()
 
 export default function Sidebar({ mode, setMode, activePage, setActivePage, open }) {
   return (
@@ -27,8 +30,8 @@ export default function Sidebar({ mode, setMode, activePage, setActivePage, open
             <span className="text-white text-sm font-bold">$</span>
           </div>
           <div>
-            <span className="text-gray-900 font-semibold text-sm">TaxEdu</span>
-            <p className="text-xs text-gray-400 leading-tight">2024 Tax Year</p>
+            <span className="text-gray-900 font-semibold text-sm">TPS Tax IQ</span>
+            <p className="text-xs text-gray-400 leading-tight">{TAX_YEAR} Tax Year</p>
           </div>
         </div>
       </div>

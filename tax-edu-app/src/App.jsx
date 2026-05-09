@@ -2,9 +2,13 @@ import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import TaxGuides from './components/TaxGuides'
 import TaxCalculator from './components/TaxCalculator'
+import TaxPlanning from './components/TaxPlanning'
 import Deadlines from './components/Deadlines'
 import AIChat from './components/AIChat'
 import './App.css'
+
+const TAX_YEAR  = new Date().getFullYear()      // 2026 — current tax year
+const PLAN_YEAR = new Date().getFullYear() + 1  // 2027 — forward planning
 
 const PAGE_META = {
   guides: {
@@ -13,7 +17,11 @@ const PAGE_META = {
   },
   calculator: {
     title: 'Tax Calculator',
-    subtitle: 'Estimate your 2024 federal income tax liability',
+    subtitle: `Estimate your ${TAX_YEAR} federal income tax liability`,
+  },
+  planning: {
+    title: 'Tax Planning',
+    subtitle: `Plan ahead — project your ${PLAN_YEAR} tax situation and find savings opportunities`,
   },
   deadlines: {
     title: 'Key Deadlines',
@@ -74,10 +82,11 @@ export default function App() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {activePage === 'guides' && <TaxGuides mode={mode} />}
+          {activePage === 'guides'     && <TaxGuides mode={mode} />}
           {activePage === 'calculator' && <TaxCalculator mode={mode} />}
-          {activePage === 'deadlines' && <Deadlines mode={mode} />}
-          {activePage === 'chat' && <AIChat mode={mode} />}
+          {activePage === 'planning'   && <TaxPlanning />}
+          {activePage === 'deadlines'  && <Deadlines mode={mode} />}
+          {activePage === 'chat'       && <AIChat mode={mode} />}
         </div>
       </div>
     </div>
