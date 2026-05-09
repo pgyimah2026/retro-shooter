@@ -1,62 +1,64 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { AlertTriangle, Lightbulb, TrendingDown, Info } from 'lucide-react'
 
-// ─── Projected 2027 figures ───────────────────────────────────────────────────
-// 2027 IRS figures are not yet published. These are estimates derived from
-// 2026 official figures (IRS Rev. Proc. 2025-29) adjusted ~2.5% for inflation.
-// Actual 2027 figures will be published by the IRS in late 2026.
+// ─── Official 2026 IRS figures ────────────────────────────────────────────────
+// Source: IRS newsroom — Rev. Proc. 2025-29 (includes One Big Beautiful Bill)
+// HSA limits: IRS Publication 969 (2026)
+// 401(k) / IRA limits: IRS retirement plans guidance (2026)
+// HoH 10%/12% bracket boundaries are IRS-estimated; all other figures are official.
 
-const PLAN_YEAR = new Date().getFullYear() + 1  // 2027
+const PLAN_YEAR = new Date().getFullYear()  // 2026
 
 const BRACKETS = {
   single: [
-    { rate: 0.10, min: 0,       max: 12700 },
-    { rate: 0.12, min: 12700,   max: 51650 },
-    { rate: 0.22, min: 51650,   max: 108350 },
-    { rate: 0.24, min: 108350,  max: 206800 },
-    { rate: 0.32, min: 206800,  max: 262600 },
-    { rate: 0.35, min: 262600,  max: 656600 },
-    { rate: 0.37, min: 656600,  max: Infinity },
+    { rate: 0.10, min: 0,       max: 12400 },
+    { rate: 0.12, min: 12400,   max: 50400 },
+    { rate: 0.22, min: 50400,   max: 105700 },
+    { rate: 0.24, min: 105700,  max: 201775 },
+    { rate: 0.32, min: 201775,  max: 256225 },
+    { rate: 0.35, min: 256225,  max: 640600 },
+    { rate: 0.37, min: 640600,  max: Infinity },
   ],
   mfj: [
-    { rate: 0.10, min: 0,       max: 25400 },
-    { rate: 0.12, min: 25400,   max: 103300 },
-    { rate: 0.22, min: 103300,  max: 216700 },
-    { rate: 0.24, min: 216700,  max: 413600 },
-    { rate: 0.32, min: 413600,  max: 525250 },
-    { rate: 0.35, min: 525250,  max: 788200 },
-    { rate: 0.37, min: 788200,  max: Infinity },
+    { rate: 0.10, min: 0,       max: 24800 },
+    { rate: 0.12, min: 24800,   max: 100800 },
+    { rate: 0.22, min: 100800,  max: 211400 },
+    { rate: 0.24, min: 211400,  max: 403550 },
+    { rate: 0.32, min: 403550,  max: 512450 },
+    { rate: 0.35, min: 512450,  max: 768700 },
+    { rate: 0.37, min: 768700,  max: Infinity },
   ],
   hoh: [
-    { rate: 0.10, min: 0,       max: 18150 },
-    { rate: 0.12, min: 18150,   max: 69150 },
-    { rate: 0.22, min: 69150,   max: 108350 },
-    { rate: 0.24, min: 108350,  max: 206800 },
-    { rate: 0.32, min: 206800,  max: 262600 },
-    { rate: 0.35, min: 262600,  max: 656600 },
-    { rate: 0.37, min: 656600,  max: Infinity },
+    // 10% & 12% thresholds are IRS-estimated; 22%+ are official (align with Single)
+    { rate: 0.10, min: 0,       max: 17700 },
+    { rate: 0.12, min: 17700,   max: 67450 },
+    { rate: 0.22, min: 67450,   max: 105700 },
+    { rate: 0.24, min: 105700,  max: 201775 },
+    { rate: 0.32, min: 201775,  max: 256225 },
+    { rate: 0.35, min: 256225,  max: 640600 },
+    { rate: 0.37, min: 640600,  max: Infinity },
   ],
 }
 
-// Projected 2027 standard deductions (~2.5% from 2026 official figures)
-const STD_DED = { single: 16500, mfj: 33000, hoh: 24750 }
+// Official 2026 standard deductions (IRS Rev. Proc. 2025-29)
+const STD_DED = { single: 16100, mfj: 32200, hoh: 24150 }
 
 const STATUS_LABELS = { single: 'Single', mfj: 'Married Filing Jointly', hoh: 'Head of Household' }
 
-// Projected 2027 Child Tax Credit: $2,000 per qualifying child under 17 (estimated unchanged)
+// 2026 Child Tax Credit: $2,000 per qualifying child under 17
 // Phase-out: $200,000 (single/HoH) / $400,000 (MFJ)
 const CTC_PER_CHILD = 2000
 const CTC_PHASEOUT = { single: 200000, hoh: 200000, mfj: 400000 }
 
-// Projected 2027 contribution limits (estimated from 2026 official IRS figures)
-// 401(k): $25,000 | catch-up 50–59 & 64+: $33,000 | SECURE 2.0 ages 60–63: $36,500
-// IRA: $7,500 | catch-up 50+: $8,700 total
-// HSA: $4,500 self-only | $9,000 family
+// 2026 contribution limits (official IRS)
+// 401(k): $24,500 | catch-up 50–59 & 64+: +$8,000 | SECURE 2.0 ages 60–63: +$11,250
+// IRA: $7,500 | catch-up 50+: +$1,100 (total $8,600)
+// HSA: $4,400 self-only | $8,750 family (IRS Pub. 969)
 const LIMITS = {
-  under50: { k401: 25000, ira: 7500, hsa_ind: 4500, hsa_fam: 9000 },
-  age5059: { k401: 33000, ira: 8700, hsa_ind: 4500, hsa_fam: 9000 },
-  age6063: { k401: 36500, ira: 8700, hsa_ind: 4500, hsa_fam: 9000 },
-  age64p:  { k401: 33000, ira: 8700, hsa_ind: 4500, hsa_fam: 9000 },
+  under50: { k401: 24500, ira: 7500, hsa_ind: 4400, hsa_fam: 8750 },
+  age5059: { k401: 32500, ira: 8600, hsa_ind: 4400, hsa_fam: 8750 },
+  age6063: { k401: 35750, ira: 8600, hsa_ind: 4400, hsa_fam: 8750 },
+  age64p:  { k401: 32500, ira: 8600, hsa_ind: 4400, hsa_fam: 8750 },
 }
 
 const AGE_LABELS = {
@@ -197,6 +199,11 @@ export default function TaxPlanning() {
   const [itemized, onItemized] = useNumInput()
   const [dedType,  setDedType] = useState('standard')
 
+  // Auto-set family HSA when filing status changes
+  useEffect(() => {
+    setFamilyHSA(status === 'mfj')
+  }, [status])
+
   const lim    = LIMITS[ageGroup]
   const hsaMax = familyHSA ? lim.hsa_fam : lim.hsa_ind
 
@@ -289,7 +296,7 @@ export default function TaxPlanning() {
       <div className="flex gap-3 p-3.5 rounded-lg border border-blue-200 bg-blue-50">
         <Info size={15} className="shrink-0 mt-0.5 text-blue-500" />
         <p className="text-xs text-blue-700 leading-relaxed">
-          <span className="font-semibold">Projected {PLAN_YEAR} estimates</span> — IRS has not yet published {PLAN_YEAR} figures. Brackets, deductions, and limits shown are estimated from official 2026 figures (IRS Rev. Proc. 2025-29) with an ~2.5% inflation adjustment. Actual {PLAN_YEAR} figures will be released by the IRS in late 2026.
+          <span className="font-semibold">Official {PLAN_YEAR} IRS figures</span> — brackets and standard deductions from IRS Rev. Proc. 2025-29 (includes One Big Beautiful Bill adjustments). HSA limits from IRS Pub. 969. HoH 10%/12% bracket thresholds are IRS estimates; all other figures are official.
         </p>
       </div>
 
@@ -425,7 +432,7 @@ export default function TaxPlanning() {
               />
               <span className="text-sm text-gray-700 capitalize">{t}</span>
               {t === 'standard' && (
-                <span className="text-xs text-gray-400">({fmt(STD_DED[status])} — est. {PLAN_YEAR})</span>
+                <span className="text-xs text-gray-400">({fmt(STD_DED[status])} — official {PLAN_YEAR})</span>
               )}
             </label>
           ))}
@@ -491,7 +498,7 @@ export default function TaxPlanning() {
                 { label: 'HSA Contribution',                    value: -result.hsaVal,    show: result.hsaVal > 0,     muted: true },
                 { label: 'Half SE Tax Deduction',               value: -result.seAboveLine, show: result.se > 0,       muted: true },
                 { label: 'Adjusted Gross Income',               value: result.agi,        bold: true },
-                { label: dedType === 'standard' ? `Standard Deduction (est. ${PLAN_YEAR})` : 'Itemized Deduction',
+                { label: dedType === 'standard' ? `Standard Deduction (official ${PLAN_YEAR})` : 'Itemized Deduction',
                                                                 value: -result.deduction, muted: true },
                 { label: 'Taxable Income',                      value: result.taxable,    bold: true },
                 { label: 'Federal Income Tax',                  value: result.incomeTax },
@@ -525,7 +532,7 @@ export default function TaxPlanning() {
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900">{PLAN_YEAR} Tax Brackets — {STATUS_LABELS[status]}</h3>
-              <span className="text-xs text-gray-400">Est. {PLAN_YEAR}</span>
+              <span className="text-xs text-gray-400">Official IRS</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -588,7 +595,7 @@ export default function TaxPlanning() {
           )}
 
           <p className="text-xs text-gray-400">
-            Federal income tax estimate only. {PLAN_YEAR} figures are projected — not yet published by the IRS. Does not include state taxes, AMT, NIIT, or all available credits. Consult a CPA to build an accurate plan for your specific situation.
+            Federal income tax estimate only. Does not include state taxes, AMT, NIIT, or all available credits. Figures sourced from IRS Rev. Proc. 2025-29 and IRS Pub. 969. Consult a CPA to build an accurate plan for your specific situation.
           </p>
         </>
       ) : (
