@@ -9,6 +9,7 @@ import { AlertTriangle, Lightbulb, TrendingDown, Info } from 'lucide-react'
 
 const PLAN_YEAR = new Date().getFullYear()  // 2026
 
+// MFS brackets = exactly half of MFJ (IRS rule); QSS brackets = same as MFJ
 const BRACKETS = {
   single: [
     { rate: 0.10, min: 0,       max: 12400 },
@@ -28,6 +29,16 @@ const BRACKETS = {
     { rate: 0.35, min: 512450,  max: 768700 },
     { rate: 0.37, min: 768700,  max: Infinity },
   ],
+  mfs: [
+    // Half of MFJ thresholds; 37% starts at $384,350 (half of $768,700)
+    { rate: 0.10, min: 0,       max: 12400 },
+    { rate: 0.12, min: 12400,   max: 50400 },
+    { rate: 0.22, min: 50400,   max: 105700 },
+    { rate: 0.24, min: 105700,  max: 201775 },
+    { rate: 0.32, min: 201775,  max: 256225 },
+    { rate: 0.35, min: 256225,  max: 384350 },
+    { rate: 0.37, min: 384350,  max: Infinity },
+  ],
   hoh: [
     // 10% & 12% thresholds are IRS-estimated; 22%+ are official (align with Single)
     { rate: 0.10, min: 0,       max: 17700 },
@@ -38,17 +49,33 @@ const BRACKETS = {
     { rate: 0.35, min: 256225,  max: 640600 },
     { rate: 0.37, min: 640600,  max: Infinity },
   ],
+  qss: [
+    // Same as MFJ — IRS Rev. Proc. 2025-29
+    { rate: 0.10, min: 0,       max: 24800 },
+    { rate: 0.12, min: 24800,   max: 100800 },
+    { rate: 0.22, min: 100800,  max: 211400 },
+    { rate: 0.24, min: 211400,  max: 403550 },
+    { rate: 0.32, min: 403550,  max: 512450 },
+    { rate: 0.35, min: 512450,  max: 768700 },
+    { rate: 0.37, min: 768700,  max: Infinity },
+  ],
 }
 
 // Official 2026 standard deductions (IRS Rev. Proc. 2025-29)
-const STD_DED = { single: 16100, mfj: 32200, hoh: 24150 }
+const STD_DED = { single: 16100, mfj: 32200, mfs: 16100, hoh: 24150, qss: 32200 }
 
-const STATUS_LABELS = { single: 'Single', mfj: 'Married Filing Jointly', hoh: 'Head of Household' }
+const STATUS_LABELS = {
+  single: 'Single',
+  mfj:    'Married Filing Jointly',
+  mfs:    'Married Filing Separately',
+  hoh:    'Head of Household',
+  qss:    'Qualifying Surviving Spouse',
+}
 
 // 2026 Child Tax Credit: $2,000 per qualifying child under 17
-// Phase-out: $200,000 (single/HoH) / $400,000 (MFJ)
+// Phase-out: $200,000 (single/HoH/MFS) / $400,000 (MFJ/QSS)
 const CTC_PER_CHILD = 2000
-const CTC_PHASEOUT = { single: 200000, hoh: 200000, mfj: 400000 }
+const CTC_PHASEOUT = { single: 200000, mfs: 200000, hoh: 200000, mfj: 400000, qss: 400000 }
 
 // 2026 contribution limits (official IRS)
 // 401(k): $24,500 | catch-up 50–59 & 64+: +$8,000 | SECURE 2.0 ages 60–63: +$11,250
@@ -199,9 +226,9 @@ export default function TaxPlanning() {
   const [itemized, onItemized] = useNumInput()
   const [dedType,  setDedType] = useState('standard')
 
-  // Auto-set family HSA when filing status changes
+  // MFJ and QSS default to family HSA; all others default to individual
   useEffect(() => {
-    setFamilyHSA(status === 'mfj')
+    setFamilyHSA(status === 'mfj' || status === 'qss')
   }, [status])
 
   const lim    = LIMITS[ageGroup]
