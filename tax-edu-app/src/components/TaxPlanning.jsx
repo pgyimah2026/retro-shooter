@@ -83,16 +83,19 @@ const AGE_LABELS = {
   age64p:  '64+ (catch-up eligible)',
 }
 
-// IRA deduction phase-out MAGI ranges — 2025 confirmed IRS figures (IR-2024-285)
-// 2026 adjustments not yet published; actual ranges will be slightly higher
+// IRA deduction phase-out MAGI ranges — 2026 IRS figures
+// Single/HoH and MFJ start points confirmed via IRS COLA adjustments page (irs.gov)
+// Phase-out width: $10,000 for single/MFS/HoH; $20,000 for MFJ/QSS (IRS rule)
+// MFS: fixed $0–$10,000, no annual COLA per IRS
+// Spouse-covered range estimated from 2025 confirmed figures + COLA pattern
 const IRA_PHASEOUT = {
-  single_covered:    { lo: 79000,  hi: 89000  },
-  hoh_covered:       { lo: 79000,  hi: 89000  },
-  mfj_covered:       { lo: 126000, hi: 146000 },
-  qss_covered:       { lo: 126000, hi: 146000 },
-  mfs_covered:       { lo: 0,      hi: 10000  }, // no annual inflation adjustment per IRS
-  mfj_spousecov:     { lo: 236000, hi: 246000 },
-  qss_spousecov:     { lo: 236000, hi: 246000 },
+  single_covered:    { lo: 81000,  hi: 91000  },  // IRS confirmed 2026
+  hoh_covered:       { lo: 81000,  hi: 91000  },  // IRS confirmed 2026
+  mfj_covered:       { lo: 129000, hi: 149000 },  // IRS confirmed 2026
+  qss_covered:       { lo: 129000, hi: 149000 },  // IRS confirmed 2026
+  mfs_covered:       { lo: 0,      hi: 10000  },  // fixed — no annual COLA per IRS
+  mfj_spousecov:     { lo: 240000, hi: 250000 },  // estimated (+~$4k from 2025)
+  qss_spousecov:     { lo: 240000, hi: 250000 },  // estimated (+~$4k from 2025)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -125,25 +128,36 @@ const fmt     = (n) => new Intl.NumberFormat('en-US', { style: 'currency', curre
 const fmtPct  = (n) => (n * 100).toFixed(1) + '%'
 const parseNum = (str) => parseFloat(String(str).replace(/,/g, '')) || 0
 
-function getIraHint(status, coveredByPlan, spouseCovered, ageGroup) {
-  const catchup = ageGroup !== 'under50' ? ' Includes $1,100 catch-up.' : ''
-  const note = ' (Based on 2025 IRS guidance; 2026 rates pending.)'
-
+// Returns phase-out range label for the IRA input hint (before income is known)
+function getIraPhaseoutLabel(status, coveredByPlan, spouseCovered) {
   if (!coveredByPlan) {
-    const hasCoveringSpouse = (status === 'mfj' || status === 'qss') && spouseCovered
-    if (hasCoveringSpouse) {
-      const r = IRA_PHASEOUT[`${status}_spousecov`]
-      return `Your spouse is covered by a workplace plan. Deduction phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI.${note}${catchup}`
-    }
-    return `Fully deductible — no workplace plan coverage.${catchup}`
+    const hasSpouse = (status === 'mfj' || status === 'qss') && spouseCovered
+    if (!hasSpouse) return 'No plan coverage — fully deductible regardless of income'
+    const r = IRA_PHASEOUT[`${status}_spousecov`]
+    return `Spouse covered — phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI${status === 'mfj' || status === 'qss' ? ' (est. 2026)' : ''}`
   }
+  if (status === 'mfs') return 'MFS — phases out $0–$10,000 MAGI (most filers: non-deductible)'
+  const r = IRA_PHASEOUT[`${status}_covered`]
+  return `Phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI (2026 IRS)`
+}
 
-  if (status === 'mfs') {
-    return `MFS: deduction phases out $0–$10,000 MAGI. Most MFS filers covered by a plan receive no IRA deduction.${catchup}`
+// Calculates actual deductibility once AGI is known
+function calcIraDeductibility(agi, status, coveredByPlan, spouseCovered, iraLimit) {
+  if (!coveredByPlan) {
+    const hasSpouse = (status === 'mfj' || status === 'qss') && spouseCovered
+    if (!hasSpouse) return { type: 'full', deductible: iraLimit }
+    const r = IRA_PHASEOUT[`${status}_spousecov`]
+    if (agi <= r.lo) return { type: 'full', deductible: iraLimit }
+    if (agi >= r.hi) return { type: 'none', deductible: 0 }
+    const partial = Math.max(200, Math.ceil(iraLimit * (1 - (agi - r.lo) / (r.hi - r.lo)) / 10) * 10)
+    return { type: 'partial', deductible: partial }
   }
   const r = IRA_PHASEOUT[`${status}_covered`]
-  if (!r) return catchup || undefined
-  return `Deduction phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI.${note}${catchup}`
+  if (!r) return { type: 'full', deductible: iraLimit }
+  if (agi <= r.lo) return { type: 'full', deductible: iraLimit }
+  if (agi >= r.hi) return { type: 'none', deductible: 0 }
+  const partial = Math.max(200, Math.ceil(iraLimit * (1 - (agi - r.lo) / (r.hi - r.lo)) / 10) * 10)
+  return { type: 'partial', deductible: partial }
 }
 
 function useNumInput() {
@@ -264,7 +278,7 @@ export default function TaxPlanning() {
   const hsaMax = familyHSA ? lim.hsa_fam : lim.hsa_ind
   const showSpouseField = status === 'mfj' || status === 'qss'
 
-  const iraHint = getIraHint(status, coveredByPlan, spouseCovered, ageGroup)
+  const iraPhaseoutLabel = getIraPhaseoutLabel(status, coveredByPlan, spouseCovered)
 
   const result = useMemo(() => {
     const w  = parseNum(wages)
@@ -305,6 +319,8 @@ export default function TaxPlanning() {
     const baseTax     = Math.max(0, calcTax(baseTaxable, status) - baseCTC) + seTax
     const savings     = baseTax - taxAfterCTC - seTax  // savings from voluntary contributions only
 
+    const iraDeductibility = calcIraDeductibility(agi, status, coveredByPlan, spouseCovered, lim.ira)
+
     return {
       gross, w, se, seTax, seAboveLine,
       k401Val, iraVal, hsaVal,
@@ -315,8 +331,9 @@ export default function TaxPlanning() {
       k401Room: lim.k401 - k401Val,
       iraRoom:  lim.ira  - iraVal,
       hsaRoom:  hsaMax   - hsaVal,
+      iraDeductibility,
     }
-  }, [wages, seNet, k401, ira, hsa, dedType, itemized, status, lim, hsaMax, children, withholding, estPaid, otherTax])
+  }, [wages, seNet, k401, ira, hsa, dedType, itemized, status, lim, hsaMax, children, withholding, estPaid, otherTax, coveredByPlan, spouseCovered])
 
   const tips = useMemo(() => {
     if (!result) return []
@@ -460,11 +477,27 @@ export default function TaxPlanning() {
               ageGroup !== 'under50' ? 'Includes $8,000 catch-up' : undefined
             }
           />
-          <ContribRow
-            label="Traditional IRA"
-            value={ira} onChange={onIra} max={lim.ira}
-            hint={iraHint}
-          />
+          <div className="space-y-2">
+            <ContribRow
+              label="Traditional IRA"
+              value={ira} onChange={onIra} max={lim.ira}
+              hint={iraPhaseoutLabel}
+            />
+            {/* Live deductibility badge — updates with filing status, income, and coverage */}
+            {result ? (
+              <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                result.iraDeductibility.type === 'full'    ? 'bg-green-50 text-green-700' :
+                result.iraDeductibility.type === 'partial' ? 'bg-amber-50 text-amber-700' :
+                                                             'bg-red-50 text-red-700'
+              }`}>
+                {result.iraDeductibility.type === 'full'    && '✓ Fully deductible'}
+                {result.iraDeductibility.type === 'partial' && `⚡ Partially deductible — up to ${fmt(result.iraDeductibility.deductible)}`}
+                {result.iraDeductibility.type === 'none'    && '✕ Non-deductible — consider Roth IRA'}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">Enter income to see deductibility</p>
+            )}
+          </div>
           <ContribRow
             label="HSA"
             value={hsa} onChange={onHsa} max={hsaMax}
