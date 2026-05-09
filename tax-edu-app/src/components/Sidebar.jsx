@@ -1,11 +1,12 @@
-import { BookOpen, Calculator, Calendar, MessageCircle, Target } from 'lucide-react'
+import { BookOpen, Calculator, Calendar, MessageCircle, Target, ClipboardList } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { id: 'guides',     icon: BookOpen,      label: 'Tax Guides' },
-  { id: 'calculator', icon: Calculator,    label: 'Tax Calculator' },
-  { id: 'planning',   icon: Target,        label: 'Tax Planning' },
-  { id: 'deadlines',  icon: Calendar,      label: 'Key Deadlines' },
-  { id: 'chat',       icon: MessageCircle, label: 'Ask AI' },
+  { id: 'guides',     icon: BookOpen,       label: 'Tax Guides' },
+  { id: 'calculator', icon: Calculator,     label: 'Tax Calculator' },
+  { id: 'planning',   icon: Target,         label: 'Tax Planning' },
+  { id: 'deadlines',  icon: Calendar,       label: 'Key Deadlines' },
+  { id: 'checklist',  icon: ClipboardList,  label: 'Documents' },
+  { id: 'chat',       icon: MessageCircle,  label: 'Ask AI' },
 ]
 
 const TAX_YEAR = new Date().getFullYear()

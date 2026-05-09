@@ -5,6 +5,7 @@ import TaxCalculator from './components/TaxCalculator'
 import TaxPlanning from './components/TaxPlanning'
 import Deadlines from './components/Deadlines'
 import AIChat from './components/AIChat'
+import DocumentsChecklist from './components/DocumentsChecklist'
 import './App.css'
 
 const TAX_YEAR  = new Date().getFullYear()      // 2026 — current tax year
@@ -26,6 +27,10 @@ const PAGE_META = {
   deadlines: {
     title: 'Key Deadlines',
     subtitle: 'Stay ahead of important tax filing dates',
+  },
+  checklist: {
+    title: 'Documents Checklist',
+    subtitle: 'Track every document you need to file your 2026 tax return',
   },
   chat: {
     title: 'Ask AI',
@@ -86,6 +91,7 @@ export default function App() {
           {activePage === 'calculator' && <TaxCalculator mode={mode} />}
           {activePage === 'planning'   && <TaxPlanning />}
           {activePage === 'deadlines'  && <Deadlines mode={mode} />}
+          {activePage === 'checklist'  && <DocumentsChecklist mode={mode} />}
           {activePage === 'chat'       && <AIChat mode={mode} />}
         </div>
       </div>

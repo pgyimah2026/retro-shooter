@@ -81,6 +81,8 @@ function MessageBubble({ message }) {
   )
 }
 
+const SESSION_LIMIT = 15  // soft display limit; not a hard block
+
 export default function AIChat({ mode }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -88,6 +90,9 @@ export default function AIChat({ mode }) {
   const [error, setError] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+
+  const questionCount = messages.filter(m => m.role === 'user').length
+  const nearLimit = questionCount >= SESSION_LIMIT - 3
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -241,9 +246,16 @@ export default function AIChat({ mode }) {
             <Send size={16} />
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-          For educational purposes only. This AI is not a licensed tax advisor. Always consult a qualified CPA or tax professional for advice specific to your situation.
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            For educational purposes only. Not a licensed tax advisor. Consult a CPA for advice specific to your situation.
+          </p>
+          {questionCount > 0 && (
+            <span className={`text-xs shrink-0 ml-3 ${nearLimit ? 'text-amber-500' : 'text-gray-300'}`}>
+              {questionCount}/{SESSION_LIMIT}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -1,15 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
-import { AlertTriangle, Lightbulb, TrendingDown, Info } from 'lucide-react'
+import { Lightbulb, TrendingDown, Info, CheckCircle, XCircle } from 'lucide-react'
 
 // ─── Official 2026 IRS figures ────────────────────────────────────────────────
-// Source: IRS newsroom — Rev. Proc. 2025-29 (includes One Big Beautiful Bill)
-// HSA limits: IRS Publication 969 (2026)
-// 401(k) / IRA limits: IRS retirement plans guidance (2026)
-// HoH 10%/12% bracket boundaries are IRS-estimated; all other figures are official.
+// Brackets & standard deductions: IRS Rev. Proc. 2025-29 (One Big Beautiful Bill)
+// HSA limits: IRS Pub. 969 | 401(k)/IRA limits: IRS retirement plans guidance
+// IRA phase-out ranges: based on 2025 IRS guidance (IR-2024-285); 2026 pending
 
 const PLAN_YEAR = new Date().getFullYear()  // 2026
 
-// MFS brackets = exactly half of MFJ (IRS rule); QSS brackets = same as MFJ
 const BRACKETS = {
   single: [
     { rate: 0.10, min: 0,       max: 12400 },
@@ -30,7 +28,6 @@ const BRACKETS = {
     { rate: 0.37, min: 768700,  max: Infinity },
   ],
   mfs: [
-    // Half of MFJ thresholds; 37% starts at $384,350 (half of $768,700)
     { rate: 0.10, min: 0,       max: 12400 },
     { rate: 0.12, min: 12400,   max: 50400 },
     { rate: 0.22, min: 50400,   max: 105700 },
@@ -40,7 +37,6 @@ const BRACKETS = {
     { rate: 0.37, min: 384350,  max: Infinity },
   ],
   hoh: [
-    // 10% & 12% thresholds are IRS-estimated; 22%+ are official (align with Single)
     { rate: 0.10, min: 0,       max: 17700 },
     { rate: 0.12, min: 17700,   max: 67450 },
     { rate: 0.22, min: 67450,   max: 105700 },
@@ -50,7 +46,6 @@ const BRACKETS = {
     { rate: 0.37, min: 640600,  max: Infinity },
   ],
   qss: [
-    // Same as MFJ — IRS Rev. Proc. 2025-29
     { rate: 0.10, min: 0,       max: 24800 },
     { rate: 0.12, min: 24800,   max: 100800 },
     { rate: 0.22, min: 100800,  max: 211400 },
@@ -61,7 +56,6 @@ const BRACKETS = {
   ],
 }
 
-// Official 2026 standard deductions (IRS Rev. Proc. 2025-29)
 const STD_DED = { single: 16100, mfj: 32200, mfs: 16100, hoh: 24150, qss: 32200 }
 
 const STATUS_LABELS = {
@@ -72,15 +66,9 @@ const STATUS_LABELS = {
   qss:    'Qualifying Surviving Spouse',
 }
 
-// 2026 Child Tax Credit: $2,000 per qualifying child under 17
-// Phase-out: $200,000 (single/HoH/MFS) / $400,000 (MFJ/QSS)
 const CTC_PER_CHILD = 2000
 const CTC_PHASEOUT = { single: 200000, mfs: 200000, hoh: 200000, mfj: 400000, qss: 400000 }
 
-// 2026 contribution limits (official IRS)
-// 401(k): $24,500 | catch-up 50–59 & 64+: +$8,000 | SECURE 2.0 ages 60–63: +$11,250
-// IRA: $7,500 | catch-up 50+: +$1,100 (total $8,600)
-// HSA: $4,400 self-only | $8,750 family (IRS Pub. 969)
 const LIMITS = {
   under50: { k401: 24500, ira: 7500, hsa_ind: 4400, hsa_fam: 8750 },
   age5059: { k401: 32500, ira: 8600, hsa_ind: 4400, hsa_fam: 8750 },
@@ -93,6 +81,18 @@ const AGE_LABELS = {
   age5059: '50–59 (catch-up eligible)',
   age6063: '60–63 (SECURE 2.0 enhanced catch-up)',
   age64p:  '64+ (catch-up eligible)',
+}
+
+// IRA deduction phase-out MAGI ranges — 2025 confirmed IRS figures (IR-2024-285)
+// 2026 adjustments not yet published; actual ranges will be slightly higher
+const IRA_PHASEOUT = {
+  single_covered:    { lo: 79000,  hi: 89000  },
+  hoh_covered:       { lo: 79000,  hi: 89000  },
+  mfj_covered:       { lo: 126000, hi: 146000 },
+  qss_covered:       { lo: 126000, hi: 146000 },
+  mfs_covered:       { lo: 0,      hi: 10000  }, // no annual inflation adjustment per IRS
+  mfj_spousecov:     { lo: 236000, hi: 246000 },
+  qss_spousecov:     { lo: 236000, hi: 246000 },
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -117,15 +117,34 @@ function getMarginalRate(taxableIncome, status) {
 function calcCTC(children, agi, status) {
   if (children <= 0) return 0
   const fullCredit = children * CTC_PER_CHILD
-  const phaseout = CTC_PHASEOUT[status]
-  const excess = Math.max(0, agi - phaseout)
-  const reduction = Math.ceil(excess / 1000) * 50
-  return Math.max(0, fullCredit - reduction)
+  const excess = Math.max(0, agi - CTC_PHASEOUT[status])
+  return Math.max(0, fullCredit - Math.ceil(excess / 1000) * 50)
 }
 
-const fmt    = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
-const fmtPct = (n) => (n * 100).toFixed(1) + '%'
+const fmt     = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+const fmtPct  = (n) => (n * 100).toFixed(1) + '%'
 const parseNum = (str) => parseFloat(String(str).replace(/,/g, '')) || 0
+
+function getIraHint(status, coveredByPlan, spouseCovered, ageGroup) {
+  const catchup = ageGroup !== 'under50' ? ' Includes $1,100 catch-up.' : ''
+  const note = ' (Based on 2025 IRS guidance; 2026 rates pending.)'
+
+  if (!coveredByPlan) {
+    const hasCoveringSpouse = (status === 'mfj' || status === 'qss') && spouseCovered
+    if (hasCoveringSpouse) {
+      const r = IRA_PHASEOUT[`${status}_spousecov`]
+      return `Your spouse is covered by a workplace plan. Deduction phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI.${note}${catchup}`
+    }
+    return `Fully deductible — no workplace plan coverage.${catchup}`
+  }
+
+  if (status === 'mfs') {
+    return `MFS: deduction phases out $0–$10,000 MAGI. Most MFS filers covered by a plan receive no IRA deduction.${catchup}`
+  }
+  const r = IRA_PHASEOUT[`${status}_covered`]
+  if (!r) return catchup || undefined
+  return `Deduction phases out ${fmt(r.lo)}–${fmt(r.hi)} MAGI.${note}${catchup}`
+}
 
 function useNumInput() {
   const [val, setVal] = useState('')
@@ -142,7 +161,7 @@ function InputField({ label, value, onChange, hint }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
+      {hint && <p className="text-xs text-gray-400 mb-1.5 leading-snug">{hint}</p>}
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
         <input
@@ -170,7 +189,7 @@ function ContribRow({ label, value, onChange, max, hint }) {
         <label className="text-sm font-medium text-gray-700">{label}</label>
         <span className="text-xs text-gray-400">Limit: {fmt(max)}</span>
       </div>
-      {hint && <p className="text-xs text-gray-400">{hint}</p>}
+      {hint && <p className="text-xs text-gray-400 leading-snug">{hint}</p>}
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
         <input
@@ -195,16 +214,21 @@ function ContribRow({ label, value, onChange, max, hint }) {
   )
 }
 
-function SummaryCard({ label, value, highlight, sub }) {
+function SummaryCard({ label, value, highlight, sub, isRefund }) {
+  const refundStyle = isRefund === true  ? { backgroundColor: '#e8f7f2', borderColor: '#1D9E75' }
+                    : isRefund === false ? { backgroundColor: '#fef2f2', borderColor: '#fca5a5' }
+                    : {}
+  const valueColor  = isRefund === true  ? '#1D9E75'
+                    : isRefund === false ? '#dc2626'
+                    : highlight ? '#1D9E75' : '#111827'
+
   return (
     <div
-      className={`rounded-xl p-4 border ${highlight ? '' : 'border-gray-200 bg-white'}`}
-      style={highlight ? { backgroundColor: '#e8f7f2', borderColor: '#1D9E75' } : {}}
+      className={`rounded-xl p-4 border ${highlight || isRefund != null ? '' : 'border-gray-200 bg-white'}`}
+      style={isRefund != null ? refundStyle : highlight ? { backgroundColor: '#e8f7f2', borderColor: '#1D9E75' } : {}}
     >
       <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-lg font-semibold" style={highlight ? { color: '#1D9E75' } : { color: '#111827' }}>
-        {value}
-      </p>
+      <p className="text-lg font-semibold" style={{ color: valueColor }}>{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
   )
@@ -213,18 +237,23 @@ function SummaryCard({ label, value, highlight, sub }) {
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function TaxPlanning() {
-  const [status,    setStatus]    = useState('single')
-  const [ageGroup,  setAgeGroup]  = useState('under50')
-  const [familyHSA, setFamilyHSA] = useState(false)
-  const [children,  setChildren]  = useState(0)
+  const [status,       setStatus]       = useState('single')
+  const [ageGroup,     setAgeGroup]     = useState('under50')
+  const [familyHSA,    setFamilyHSA]    = useState(false)
+  const [children,     setChildren]     = useState(0)
+  const [coveredByPlan, setCovered]     = useState(false)
+  const [spouseCovered, setSpouseCov]   = useState(false)
+  const [dedType,      setDedType]      = useState('standard')
 
-  const [wages,    onWages]    = useNumInput()
-  const [seNet,    onSeNet]    = useNumInput()
-  const [k401,     onK401]     = useNumInput()
-  const [ira,      onIra]      = useNumInput()
-  const [hsa,      onHsa]      = useNumInput()
-  const [itemized, onItemized] = useNumInput()
-  const [dedType,  setDedType] = useState('standard')
+  const [wages,       onWages]      = useNumInput()
+  const [seNet,       onSeNet]      = useNumInput()
+  const [k401,        onK401]       = useNumInput()
+  const [ira,         onIra]        = useNumInput()
+  const [hsa,         onHsa]        = useNumInput()
+  const [itemized,    onItemized]   = useNumInput()
+  const [withholding, onWithholding] = useNumInput()
+  const [estPaid,     onEstPaid]    = useNumInput()
+  const [otherTax,    onOtherTax]   = useNumInput()
 
   // MFJ and QSS default to family HSA; all others default to individual
   useEffect(() => {
@@ -233,6 +262,9 @@ export default function TaxPlanning() {
 
   const lim    = LIMITS[ageGroup]
   const hsaMax = familyHSA ? lim.hsa_fam : lim.hsa_ind
+  const showSpouseField = status === 'mfj' || status === 'qss'
+
+  const iraHint = getIraHint(status, coveredByPlan, spouseCovered, ageGroup)
 
   const result = useMemo(() => {
     const w  = parseNum(wages)
@@ -244,8 +276,8 @@ export default function TaxPlanning() {
     const iraVal  = Math.min(parseNum(ira),  lim.ira)
     const hsaVal  = Math.min(parseNum(hsa),  hsaMax)
 
-    const netSE      = se * 0.9235
-    const seTax      = netSE * 0.153
+    const netSE       = se * 0.9235
+    const seTax       = netSE * 0.153
     const seAboveLine = seTax / 2
 
     const contributions = k401Val + iraVal + hsaVal + seAboveLine
@@ -256,65 +288,67 @@ export default function TaxPlanning() {
     const deduction = dedType === 'standard' ? stdDed : Math.max(itemAmt, stdDed)
     const taxable   = Math.max(0, agi - deduction)
 
-    const incomeTax = calcTax(taxable, status)
-    const ctc       = calcCTC(children, agi, status)
+    const incomeTax   = calcTax(taxable, status)
+    const ctc         = calcCTC(children, agi, status)
     const taxAfterCTC = Math.max(0, incomeTax - ctc)
-    const totalTax  = taxAfterCTC + seTax
-    const effective = gross > 0 ? totalTax / gross : 0
-    const marginal  = getMarginalRate(taxable, status)
+    const totalTax    = taxAfterCTC + seTax + parseNum(otherTax)
+    const effective   = gross > 0 ? totalTax / gross : 0
+    const marginal    = getMarginalRate(taxable, status)
 
-    // Baseline with no voluntary contributions
+    const totalPaid   = parseNum(withholding) + parseNum(estPaid)
+    const balance     = totalTax - totalPaid  // positive = owe, negative = refund
+
+    // Baseline (no voluntary contributions) for savings calc
     const baseAGI     = Math.max(0, gross - seAboveLine)
     const baseTaxable = Math.max(0, baseAGI - deduction)
     const baseCTC     = calcCTC(children, baseAGI, status)
     const baseTax     = Math.max(0, calcTax(baseTaxable, status) - baseCTC) + seTax
-    const savings     = baseTax - totalTax
+    const savings     = baseTax - taxAfterCTC - seTax  // savings from voluntary contributions only
 
     return {
       gross, w, se, seTax, seAboveLine,
       k401Val, iraVal, hsaVal,
       contributions, agi, deduction, taxable,
       incomeTax, ctc, taxAfterCTC, totalTax, effective, marginal,
-      savings, stdDed,
+      savings: Math.max(0, savings),
+      stdDed, totalPaid, balance,
       k401Room: lim.k401 - k401Val,
-      iraRoom:  lim.ira - iraVal,
-      hsaRoom:  hsaMax - hsaVal,
+      iraRoom:  lim.ira  - iraVal,
+      hsaRoom:  hsaMax   - hsaVal,
     }
-  }, [wages, seNet, k401, ira, hsa, dedType, itemized, status, lim, hsaMax, children])
+  }, [wages, seNet, k401, ira, hsa, dedType, itemized, status, lim, hsaMax, children, withholding, estPaid, otherTax])
 
   const tips = useMemo(() => {
     if (!result) return []
     const r = result.marginal
     const out = []
 
-    if (result.k401Room > 0) {
-      out.push(`You have ${fmt(result.k401Room)} of unused 401(k) space. Maxing it out could save roughly ${fmt(Math.round(result.k401Room * r))} in federal taxes — money that keeps compounding tax-deferred until retirement.`)
-    }
-    if (result.iraRoom > 0) {
-      out.push(`You can still contribute up to ${fmt(result.iraRoom)} more to a Traditional IRA this year, saving about ${fmt(Math.round(result.iraRoom * r))} in taxes. If you expect to be in a higher bracket in retirement, a Roth IRA could be the smarter long-term play — no deduction now, but tax-free withdrawals later.`)
-    }
-    if (result.hsaRoom > 0) {
-      out.push(`HSAs are one of the few triple tax-advantaged accounts available — pre-tax contributions, tax-free growth, and tax-free withdrawals for medical expenses. You have ${fmt(result.hsaRoom)} of unused ${PLAN_YEAR} HSA room.`)
-    }
-    if (result.se > 0 && result.k401Val < lim.k401 * 0.5) {
-      out.push(`As a self-employed person, a Solo 401(k) lets you contribute both as the employee (up to ${fmt(lim.k401)}) and employer (up to 25% of net SE income). This can dramatically reduce your taxable income beyond a standard 401(k).`)
-    }
-    if (r >= 0.22 && dedType === 'standard') {
-      out.push(`At a ${fmtPct(r)} marginal rate, it's worth a quick check to see if itemizing beats your ${fmt(result.stdDed)} standard deduction — especially if you have mortgage interest, significant charitable donations, or high state and local taxes.`)
-    }
-    if (result.marginal >= 0.32) {
-      out.push(`You're in the ${fmtPct(r)} bracket. Charitable bunching — stacking two or more years of donations into one tax year — can help you clear the standard deduction threshold and maximize your itemized deduction.`)
-    }
-    if (children === 0 && result.gross < 200000) {
-      out.push(`If you have qualifying children under 17, the ${PLAN_YEAR} Child Tax Credit is worth up to ${fmt(CTC_PER_CHILD)} per child — enter the number of children above to see the impact on your tax bill.`)
-    }
-    if (result.marginal === 0) {
-      out.push(`Your taxable income is low enough that you may owe $0 in federal income tax. This is a great year to consider a Roth conversion — moving money from a Traditional to Roth IRA at little to no tax cost.`)
-    }
+    if (result.k401Room > 0)
+      out.push(`You have ${fmt(result.k401Room)} of unused 401(k) space. Maxing it out could save roughly ${fmt(Math.round(result.k401Room * r))} in federal taxes.`)
+    if (result.iraRoom > 0)
+      out.push(`You can still contribute up to ${fmt(result.iraRoom)} to a Traditional IRA${coveredByPlan ? ' — check the deductibility note above based on your income' : ', which is fully deductible'}. A Roth IRA is worth considering if you expect a higher bracket in retirement.`)
+    if (result.hsaRoom > 0)
+      out.push(`HSAs offer triple tax advantages — pre-tax in, tax-free growth, tax-free out for medical expenses. You have ${fmt(result.hsaRoom)} of unused ${PLAN_YEAR} HSA space.`)
+    if (result.se > 0 && result.k401Val < lim.k401 * 0.5)
+      out.push(`As a self-employed person, a Solo 401(k) lets you contribute as both employee (up to ${fmt(lim.k401)}) and employer (up to 25% of net SE income), dramatically lowering taxable income.`)
+    if (r >= 0.22 && dedType === 'standard')
+      out.push(`At a ${fmtPct(r)} marginal rate, compare your ${fmt(result.stdDed)} standard deduction against your actual deductible expenses — mortgage interest, state taxes, and charitable gifts can push you over.`)
+    if (result.marginal >= 0.32)
+      out.push(`In the ${fmtPct(r)} bracket, charitable bunching — stacking two or more years of donations into one year — can help you clear the standard deduction and maximize itemized deductions.`)
+    if (children === 0 && result.gross < 200000)
+      out.push(`If you have qualifying children under 17, the ${PLAN_YEAR} Child Tax Credit is worth up to ${fmt(CTC_PER_CHILD)} per child. Enter the number above to see the impact.`)
+    if (result.marginal === 0)
+      out.push(`Your taxable income falls in the 0% bracket — an excellent year for a Roth IRA conversion at minimal tax cost.`)
+    if (result.balance > 500)
+      out.push(`You're projected to owe ${fmt(result.balance)} at filing. Consider increasing withholding or making an estimated payment to avoid an underpayment penalty.`)
+    if (result.balance < -500)
+      out.push(`You're projected for a ${fmt(Math.abs(result.balance))} refund. A large refund means you've given the IRS an interest-free loan — adjusting your W-4 withholding puts that money to work sooner.`)
+
     return out
-  }, [result, dedType, children, lim])
+  }, [result, dedType, children, lim, coveredByPlan])
 
   const hasContribs = result && (result.k401Val + result.iraVal + result.hsaVal) > 0
+  const hasPaid     = result && result.totalPaid > 0
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -323,15 +357,15 @@ export default function TaxPlanning() {
       <div className="flex gap-3 p-3.5 rounded-lg border border-blue-200 bg-blue-50">
         <Info size={15} className="shrink-0 mt-0.5 text-blue-500" />
         <p className="text-xs text-blue-700 leading-relaxed">
-          <span className="font-semibold">Official {PLAN_YEAR} IRS figures</span> — brackets and standard deductions from IRS Rev. Proc. 2025-29 (includes One Big Beautiful Bill adjustments). HSA limits from IRS Pub. 969. HoH 10%/12% bracket thresholds are IRS estimates; all other figures are official.
+          <span className="font-semibold">Official {PLAN_YEAR} IRS figures</span> — brackets and standard deductions from IRS Rev. Proc. 2025-29. HSA from IRS Pub. 969. IRA phase-out ranges based on 2025 guidance; 2026 adjustments pending IRS publication.
         </p>
       </div>
 
-      {/* Filing info */}
+      {/* Filing setup */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-gray-900">{PLAN_YEAR} Planning Setup</h2>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Filing Status</label>
             <select
@@ -363,14 +397,9 @@ export default function TaxPlanning() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Qualifying Children Under 17
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Qualifying Children Under 17</label>
             <input
-              type="number"
-              min={0}
-              max={20}
-              value={children}
+              type="number" min={0} max={20} value={children}
               onChange={(e) => setChildren(Math.max(0, parseInt(e.target.value) || 0))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none"
               onFocus={(e) => (e.target.style.boxShadow = '0 0 0 2px #1D9E75')}
@@ -378,22 +407,30 @@ export default function TaxPlanning() {
             />
             {children > 0 && (
               <p className="text-xs text-gray-400 mt-1">
-                Up to {fmt(children * CTC_PER_CHILD)} Child Tax Credit — subject to phase-out above {fmt(CTC_PHASEOUT[status])}
+                Up to {fmt(children * CTC_PER_CHILD)} CTC — phases out above {fmt(CTC_PHASEOUT[status])} AGI
               </p>
             )}
           </div>
 
-          <div className="flex items-end pb-1">
+          <div className="flex flex-col gap-2 justify-end pb-1">
             <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={familyHSA}
-                onChange={(e) => setFamilyHSA(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#1D9E75]"
-              />
+              <input type="checkbox" checked={familyHSA} onChange={(e) => setFamilyHSA(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#1D9E75]" />
               <span className="text-sm text-gray-700">Family HSA coverage</span>
-              <span className="text-xs text-gray-400">({fmt(lim.hsa_fam)} limit)</span>
+              <span className="text-xs text-gray-400">({fmt(lim.hsa_fam)})</span>
             </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={coveredByPlan} onChange={(e) => setCovered(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#1D9E75]" />
+              <span className="text-sm text-gray-700">Covered by workplace retirement plan</span>
+            </label>
+            {showSpouseField && coveredByPlan === false && (
+              <label className="flex items-center gap-2.5 cursor-pointer pl-1">
+                <input type="checkbox" checked={spouseCovered} onChange={(e) => setSpouseCov(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[#1D9E75]" />
+                <span className="text-sm text-gray-600">Spouse covered by workplace plan</span>
+              </label>
+            )}
           </div>
         </div>
       </div>
@@ -412,15 +449,12 @@ export default function TaxPlanning() {
         <div className="flex items-center gap-2">
           <TrendingDown size={15} style={{ color: '#1D9E75' }} />
           <h2 className="text-sm font-semibold text-gray-900">Pre-Tax Contributions</h2>
-          <span className="text-xs text-gray-400">— each dollar reduces your taxable income</span>
+          <span className="text-xs text-gray-400">— each dollar reduces taxable income</span>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <ContribRow
             label="401(k) / 403(b)"
-            value={k401}
-            onChange={onK401}
-            max={lim.k401}
+            value={k401} onChange={onK401} max={lim.k401}
             hint={
               ageGroup === 'age6063' ? 'Includes $11,250 SECURE 2.0 catch-up' :
               ageGroup !== 'under50' ? 'Includes $8,000 catch-up' : undefined
@@ -428,16 +462,12 @@ export default function TaxPlanning() {
           />
           <ContribRow
             label="Traditional IRA"
-            value={ira}
-            onChange={onIra}
-            max={lim.ira}
-            hint={ageGroup !== 'under50' ? 'Includes $1,100 catch-up' : undefined}
+            value={ira} onChange={onIra} max={lim.ira}
+            hint={iraHint}
           />
           <ContribRow
             label="HSA"
-            value={hsa}
-            onChange={onHsa}
-            max={hsaMax}
+            value={hsa} onChange={onHsa} max={hsaMax}
             hint={familyHSA ? 'Family plan limit' : 'Individual plan limit'}
           />
         </div>
@@ -449,14 +479,8 @@ export default function TaxPlanning() {
         <div className="flex gap-5 flex-wrap">
           {['standard', 'itemized'].map((t) => (
             <label key={t} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="dedType"
-                value={t}
-                checked={dedType === t}
-                onChange={() => setDedType(t)}
-                className="accent-[#1D9E75]"
-              />
+              <input type="radio" name="dedType" value={t} checked={dedType === t}
+                onChange={() => setDedType(t)} className="accent-[#1D9E75]" />
               <span className="text-sm text-gray-700 capitalize">{t}</span>
               {t === 'standard' && (
                 <span className="text-xs text-gray-400">({fmt(STD_DED[status])} — official {PLAN_YEAR})</span>
@@ -471,24 +495,46 @@ export default function TaxPlanning() {
         )}
       </div>
 
+      {/* Payments & withholding */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-900">Taxes Paid &amp; Withheld</h2>
+        <p className="text-xs text-gray-400 -mt-2">Enter payments already made to estimate your refund or balance due.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <InputField
+            label="Federal Tax Withheld"
+            value={withholding} onChange={onWithholding}
+            hint="From W-2 Box 2 and/or 1099 withholding"
+          />
+          <InputField
+            label="Estimated Tax Payments"
+            value={estPaid} onChange={onEstPaid}
+            hint="Quarterly payments made (Forms 1040-ES)"
+          />
+          <InputField
+            label="Other Additional Taxes"
+            value={otherTax} onChange={onOtherTax}
+            hint="e.g. AMT, NIIT, household employment taxes"
+          />
+        </div>
+      </div>
+
       {/* Results */}
       {result ? (
         <>
-          {/* Tax savings callout */}
+          {/* Savings callout */}
           {hasContribs && result.savings > 0 && (
-            <div
-              className="flex items-center gap-3 p-4 rounded-xl border"
-              style={{ backgroundColor: '#e8f7f2', borderColor: '#1D9E75' }}
-            >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#1D9E75' }}>
+            <div className="flex items-center gap-3 p-4 rounded-xl border"
+              style={{ backgroundColor: '#e8f7f2', borderColor: '#1D9E75' }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: '#1D9E75' }}>
                 <TrendingDown size={15} className="text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold" style={{ color: '#14764f' }}>
-                  Your pre-tax contributions save you {fmt(result.savings)} in taxes
+                  Pre-tax contributions save you {fmt(result.savings)} in federal taxes
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: '#1D9E75' }}>
-                  {fmt(result.contributions)} in contributions reduces your federal tax bill
+                  {fmt(result.contributions)} in contributions reduces your taxable income
                 </p>
               </div>
             </div>
@@ -496,18 +542,31 @@ export default function TaxPlanning() {
 
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <SummaryCard label="Gross Income"    value={fmt(result.gross)} />
-            <SummaryCard
-              label="Adj. Gross Income"
-              value={fmt(result.agi)}
-              sub={result.contributions > 0 ? `−${fmt(result.contributions)} deducted` : undefined}
-            />
+            <SummaryCard label="Gross Income"   value={fmt(result.gross)} />
+            <SummaryCard label="Adj. Gross Income" value={fmt(result.agi)}
+              sub={result.contributions > 0 ? `−${fmt(result.contributions)} deducted` : undefined} />
             <SummaryCard label="Est. Total Tax" value={fmt(result.totalTax)} highlight />
             <SummaryCard
-              label="Effective Rate"
-              value={fmtPct(result.effective)}
-              sub={`Marginal: ${fmtPct(result.marginal)}`}
+              label={result.balance >= 0 ? 'Balance Due' : 'Est. Refund'}
+              value={fmt(Math.abs(result.balance))}
+              isRefund={hasPaid ? result.balance < 0 : null}
+              sub={hasPaid
+                ? `${fmt(result.totalPaid)} paid so far`
+                : 'Enter payments above'}
             />
+          </div>
+
+          {/* Effective/marginal rate pills */}
+          <div className="flex gap-3 flex-wrap">
+            {[
+              { label: 'Effective Rate', val: fmtPct(result.effective) },
+              { label: 'Marginal Rate', val: fmtPct(result.marginal) },
+            ].map(({ label, val }) => (
+              <div key={label} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-1.5">
+                <span className="text-xs text-gray-500">{label}:</span>
+                <span className="text-xs font-semibold text-gray-900">{val}</span>
+              </div>
+            ))}
           </div>
 
           {/* Breakdown */}
@@ -517,36 +576,45 @@ export default function TaxPlanning() {
             </div>
             <div className="px-5 py-4 space-y-2.5 text-sm">
               {[
-                { label: 'W-2 / Salary Income',                 value: result.w,          show: result.w > 0 },
-                { label: 'Self-Employment Income',              value: result.se,         show: result.se > 0 },
-                { label: 'Total Gross Income',                  value: result.gross,      bold: true },
-                { label: '401(k) Contribution',                 value: -result.k401Val,   show: result.k401Val > 0,    muted: true },
-                { label: 'IRA Contribution',                    value: -result.iraVal,    show: result.iraVal > 0,     muted: true },
-                { label: 'HSA Contribution',                    value: -result.hsaVal,    show: result.hsaVal > 0,     muted: true },
-                { label: 'Half SE Tax Deduction',               value: -result.seAboveLine, show: result.se > 0,       muted: true },
-                { label: 'Adjusted Gross Income',               value: result.agi,        bold: true },
+                { label: 'W-2 / Salary Income',                                      value: result.w,            show: result.w > 0 },
+                { label: 'Self-Employment Income',                                    value: result.se,           show: result.se > 0 },
+                { label: 'Total Gross Income',                                        value: result.gross,        bold: true },
+                { label: '401(k) Contribution',                                       value: -result.k401Val,     show: result.k401Val > 0, muted: true },
+                { label: 'IRA Contribution',                                          value: -result.iraVal,      show: result.iraVal > 0,  muted: true },
+                { label: 'HSA Contribution',                                          value: -result.hsaVal,      show: result.hsaVal > 0,  muted: true },
+                { label: 'Half SE Tax Deduction',                                     value: -result.seAboveLine, show: result.se > 0,      muted: true },
+                { label: 'Adjusted Gross Income',                                     value: result.agi,          bold: true },
                 { label: dedType === 'standard' ? `Standard Deduction (official ${PLAN_YEAR})` : 'Itemized Deduction',
-                                                                value: -result.deduction, muted: true },
-                { label: 'Taxable Income',                      value: result.taxable,    bold: true },
-                { label: 'Federal Income Tax',                  value: result.incomeTax },
+                                                                                      value: -result.deduction,   muted: true },
+                { label: 'Taxable Income',                                            value: result.taxable,      bold: true },
+                { label: 'Federal Income Tax',                                        value: result.incomeTax },
                 { label: `Child Tax Credit (${children} child${children !== 1 ? 'ren' : ''})`,
-                                                                value: -result.ctc,       show: result.ctc > 0,        muted: true },
-                { label: 'Income Tax After Credits',            value: result.taxAfterCTC, show: result.ctc > 0 },
-                { label: 'Self-Employment Tax',                 value: result.seTax,      show: result.se > 0 },
-                { label: 'Total Estimated Tax',                 value: result.totalTax,   bold: true, highlight: true },
+                                                                                      value: -result.ctc,         show: result.ctc > 0, muted: true },
+                { label: 'Income Tax After Credits',                                  value: result.taxAfterCTC,  show: result.ctc > 0 },
+                { label: 'Self-Employment Tax (15.3%)',                               value: result.seTax,        show: result.se > 0 },
+                { label: 'Other Additional Taxes',                                    value: parseNum(otherTax),  show: parseNum(otherTax) > 0 },
+                { label: 'Total Estimated Tax',                                       value: result.totalTax,     bold: true, highlight: true },
+                { label: 'Federal Tax Withheld',                                      value: -parseNum(withholding), show: parseNum(withholding) > 0, muted: true },
+                { label: 'Estimated Payments Made',                                   value: -parseNum(estPaid),  show: parseNum(estPaid) > 0,      muted: true },
+                { label: result.balance >= 0 ? 'Balance Due at Filing' : 'Estimated Refund',
+                                                                                      value: Math.abs(result.balance), show: hasPaid,
+                  bold: true, refund: result.balance < 0 },
               ]
                 .filter((r) => r.show !== false)
-                .map(({ label, value, bold, muted, highlight }, i) => (
-                  <div
-                    key={i}
-                    className={`flex justify-between items-center py-1 ${bold ? 'border-t border-gray-100 pt-2.5 mt-1' : ''}`}
-                  >
+                .map(({ label, value, bold, muted, highlight, refund }, i) => (
+                  <div key={i}
+                    className={`flex justify-between items-center py-1 ${bold ? 'border-t border-gray-100 pt-2.5 mt-1' : ''}`}>
                     <span className={bold ? 'font-semibold text-gray-900' : muted ? 'text-gray-400 pl-3' : 'text-gray-600'}>
                       {muted && value < 0 ? '− ' : ''}{label}
                     </span>
                     <span
-                      className={`font-medium ${highlight ? 'text-base font-semibold' : ''}`}
-                      style={highlight ? { color: '#1D9E75' } : { color: value < 0 ? '#6b7280' : '#111827' }}
+                      className={`font-medium ${highlight || (bold && refund != null) ? 'text-base font-semibold' : ''}`}
+                      style={{
+                        color: highlight ? '#1D9E75'
+                             : refund === true ? '#1D9E75'
+                             : refund === false ? '#dc2626'
+                             : value < 0 ? '#6b7280' : '#111827'
+                      }}
                     >
                       {value < 0 ? `(${fmt(Math.abs(value))})` : fmt(value)}
                     </span>
@@ -555,10 +623,10 @@ export default function TaxPlanning() {
             </div>
           </div>
 
-          {/* 2026 bracket reference */}
+          {/* Bracket table */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">{PLAN_YEAR} Tax Brackets — {STATUS_LABELS[status]}</h3>
+              <h3 className="text-sm font-semibold text-gray-900">{PLAN_YEAR} Brackets — {STATUS_LABELS[status]}</h3>
               <span className="text-xs text-gray-400">Official IRS</span>
             </div>
             <div className="overflow-x-auto">
@@ -573,30 +641,20 @@ export default function TaxPlanning() {
                 <tbody>
                   {BRACKETS[status].map((b, i) => {
                     const inBracket = result.taxable > b.min
-                      ? Math.min(result.taxable, b.max === Infinity ? result.taxable : b.max) - b.min
-                      : 0
+                      ? Math.min(result.taxable, b.max === Infinity ? result.taxable : b.max) - b.min : 0
                     const isActive = inBracket > 0
-                    const isTop    = isActive && (i === BRACKETS[status].length - 1 || result.taxable <= BRACKETS[status][i + 1]?.min)
+                    const isTop = isActive && (i === BRACKETS[status].length - 1 || result.taxable <= BRACKETS[status][i + 1]?.min)
                     return (
-                      <tr
-                        key={i}
-                        className={`border-b border-gray-50 last:border-0 ${isTop ? 'font-medium' : ''}`}
-                        style={isTop ? { backgroundColor: '#f0faf6' } : {}}
-                      >
+                      <tr key={i} className={`border-b border-gray-50 last:border-0 ${isTop ? 'font-medium' : ''}`}
+                        style={isTop ? { backgroundColor: '#f0faf6' } : {}}>
                         <td className="px-5 py-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${isTop ? 'text-white' : isActive ? 'text-gray-700 bg-gray-100' : 'text-gray-400 bg-gray-50'}`}
-                            style={isTop ? { backgroundColor: '#1D9E75' } : {}}
-                          >
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${isTop ? 'text-white' : isActive ? 'text-gray-700 bg-gray-100' : 'text-gray-400 bg-gray-50'}`}
+                            style={isTop ? { backgroundColor: '#1D9E75' } : {}}>
                             {fmtPct(b.rate)}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-gray-600">
-                          {fmt(b.min)} – {b.max === Infinity ? 'and above' : fmt(b.max)}
-                        </td>
-                        <td className="px-5 py-3 text-right text-gray-800">
-                          {inBracket > 0 ? fmt(inBracket) : '—'}
-                        </td>
+                        <td className="px-5 py-3 text-gray-600">{fmt(b.min)} – {b.max === Infinity ? 'and above' : fmt(b.max)}</td>
+                        <td className="px-5 py-3 text-right text-gray-800">{inBracket > 0 ? fmt(inBracket) : '—'}</td>
                       </tr>
                     )
                   })}
@@ -622,7 +680,9 @@ export default function TaxPlanning() {
           )}
 
           <p className="text-xs text-gray-400">
-            Federal income tax estimate only. Does not include state taxes, AMT, NIIT, or all available credits. Figures sourced from IRS Rev. Proc. 2025-29 and IRS Pub. 969. Consult a CPA to build an accurate plan for your specific situation.
+            Federal income tax estimate only. Does not include state taxes, AMT, NIIT, or all available credits.
+            Figures: IRS Rev. Proc. 2025-29, IRS Pub. 969. IRA phase-out ranges based on 2025 IRS guidance.
+            Consult a CPA for an accurate plan specific to your situation.
           </p>
         </>
       ) : (
