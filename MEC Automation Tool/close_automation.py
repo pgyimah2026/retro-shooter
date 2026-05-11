@@ -64,6 +64,7 @@ import commentary_generator as _cg
 from commentary_generator import generate_commentary
 from report_generator     import generate_report
 from je_generator         import create_je_template
+from run_logger           import RunLogger
 
 log = logging.getLogger(__name__)
 
@@ -519,12 +520,19 @@ def main() -> int:  # noqa: C901 — complexity is inherent to a workflow orches
     est_cost       = 0.0
     report_df      = pd.DataFrame()
 
+    # Logger is skipped for dry runs — no real work is done.
+    _rl  = None if args.dry_run else RunLogger()
+    _rid = None
+
     # ── Step 1: Load config ───────────────────────────────────────────────────
     try:
         config = load_client_config(client_id, config_dir=args.config_dir)
     except (FileNotFoundError, ValueError) as exc:
         print(f"\nError: {exc}", file=sys.stderr)
         return 1
+
+    if _rl:
+        _rid = _rl.start(client_id, config["client_name"], args.month, args.mode, model_id)
 
     if args.threshold is not None:
         config["variance_threshold"]     = args.threshold
@@ -543,6 +551,8 @@ def main() -> int:  # noqa: C901 — complexity is inherent to a workflow orches
                         else _find_tb_file(client_id_raw, py,   pm,  args.data_dir))
     except FileNotFoundError as exc:
         print(f"\nError: {exc}", file=sys.stderr)
+        if _rid:
+            _rl.finish(_rid, "failed", [], [str(exc)], time.monotonic() - start_time)
         return 1
 
     # ── Steps 2-3 outside the bar (fast, no API) ─────────────────────────────
@@ -559,6 +569,8 @@ def main() -> int:  # noqa: C901 — complexity is inherent to a workflow orches
             prior_df   = _load_single_period(prior_path)
         except (FileNotFoundError, ValueError, RuntimeError) as exc:
             tqdm.write(f"\nError: {exc}", file=sys.stderr)
+            if _rid:
+                _rl.finish(_rid, "failed", [], [str(exc)], time.monotonic() - start_time)
             return 1
         pbar.update(1)
 
@@ -572,6 +584,8 @@ def main() -> int:  # noqa: C901 — complexity is inherent to a workflow orches
             )
         except Exception as exc:
             tqdm.write(f"\nError during variance analysis: {exc}", file=sys.stderr)
+            if _rid:
+                _rl.finish(_rid, "failed", [], [str(exc)], time.monotonic() - start_time)
             return 1
         pbar.update(1)
 
@@ -669,6 +683,19 @@ def main() -> int:  # noqa: C901 — complexity is inherent to a workflow orches
         config, p_label, args.month, args.mode, model_id,
         report_df, outputs, commentary, est_cost, errors, start_time,
     )
+
+    if _rid:
+        status = "success" if not errors else ("partial" if outputs else "failed")
+        _rl.finish(
+            _rid,
+            status,
+            [p.name for p in outputs.values()],
+            errors,
+            elapsed_s=time.monotonic() - start_time,
+            cost_usd=est_cost,
+            accounts=len(report_df),
+            flagged=int(report_df["Flagged"].sum()) if not report_df.empty else 0,
+        )
 
     return 1 if errors else 0
 
