@@ -1,8 +1,8 @@
-"""run_batch_close.py — Overnight batch month-end close using the Anthropic Batch API.
+"""run_batch_close.py -- Overnight batch month-end close using the Anthropic Batch API.
 
 Two-step workflow:
 
-  Step 1 — Submit (run before you leave for the day):
+  Step 1 -- Submit (run before you leave for the day):
       python run_batch_close.py submit --client abc_corporation --month 2026-04
 
       This will:
@@ -11,7 +11,7 @@ Two-step workflow:
         • Submit an Anthropic Message Batches job (50 % cost discount)
         • Save a manifest JSON so the retrieve step is self-contained
 
-  Step 2 — Retrieve (run the next morning, or pass --wait to block):
+  Step 2 -- Retrieve (run the next morning, or pass --wait to block):
       python run_batch_close.py retrieve --manifest output/abc_corporation/2026-04/batch_manifest.json
       python run_batch_close.py retrieve --manifest ... --wait   # block until done
 
@@ -186,7 +186,7 @@ def _load_manifest(path: Path) -> dict:
 
 
 def _print_separator() -> None:
-    print("─" * 70)
+    print("-" * 70)
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     """Submit a batch close job.  Returns 0 on success, 1 on error."""
 
     _print_separator()
-    print("  MEC Batch Close — SUBMIT")
+    print("  MEC Batch Close -- SUBMIT")
     _print_separator()
 
     # --- resolve directories -------------------------------------------------
@@ -257,7 +257,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
     print(f"    {len(report)} accounts | {flagged_count} flagged (>{threshold}% variance)")
 
     if flagged_count == 0:
-        print("\n    No flagged variances — nothing to submit. Exiting.")
+        print("\n    No flagged variances -- nothing to submit. Exiting.")
         return 0
 
     # --- export variance Excel -----------------------------------------------
@@ -372,7 +372,7 @@ def cmd_retrieve(args: argparse.Namespace) -> int:
     """Retrieve results and generate final reports.  Returns 0 on success."""
 
     _print_separator()
-    print("  MEC Batch Close — RETRIEVE")
+    print("  MEC Batch Close -- RETRIEVE")
     _print_separator()
 
     # --- load manifest -------------------------------------------------------
@@ -450,7 +450,7 @@ def cmd_retrieve(args: argparse.Namespace) -> int:
         config = load_client_config(client_id, config_dir=str(config_dir))
         config = merge_with_defaults(config)
     except Exception as exc:
-        log.warning("Could not load client config (%s) — using defaults.", exc)
+        log.warning("Could not load client config (%s) -- using defaults.", exc)
         config = {
             "client_name": client_name,
             "preparer": "",
