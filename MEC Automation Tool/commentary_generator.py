@@ -78,6 +78,14 @@ _ACCT_USER_TMPL = (
 _POLL_INTERVAL_SEC = 60
 _MAX_WAIT_HOURS    = 12
 
+# Populated after every real-time API call; read by callers for reporting.
+_last_usage: dict = {
+    "input_tokens":                0,
+    "output_tokens":               0,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens":     0,
+}
+
 
 # ---------------------------------------------------------------------------
 # Public API — real-time mode
@@ -456,22 +464,49 @@ def _call_api(client: anthropic.Anthropic, model: str, user_message: str) -> str
         raise
 
     usage = response.usage
+    cache_create = getattr(usage, "cache_creation_input_tokens", 0)
+    cache_read   = getattr(usage, "cache_read_input_tokens",     0)
+
+    # Expose stats so callers can surface them in run summaries
+    global _last_usage
+    _last_usage = {
+        "input_tokens":                usage.input_tokens,
+        "output_tokens":               usage.output_tokens,
+        "cache_creation_input_tokens": cache_create,
+        "cache_read_input_tokens":     cache_read,
+    }
+
     log.info(
-        "API call — model: %s | in: %d | out: %d | cache_create: %d | cache_read: %d",
+        "API call -- model: %s | in: %d | out: %d | cache_create: %d | cache_read: %d",
         model,
         usage.input_tokens,
         usage.output_tokens,
-        getattr(usage, "cache_creation_input_tokens", 0),
-        getattr(usage, "cache_read_input_tokens", 0),
+        cache_create,
+        cache_read,
     )
-    return response.content[0].text
+    text_content = next(
+        (block.text for block in response.content if getattr(block, "type", "") == "text"),
+        "",
+    )
+    if not text_content:
+        log.warning(
+            "No text content block found in response (content types: %s)",
+            [getattr(b, "type", "?") for b in response.content],
+        )
+    return text_content
 
 
 def _parse_response(raw_text: str, df: pd.DataFrame) -> list[dict]:
     rows = list(df.itertuples(index=False))
 
+    # Strip markdown code fences if the model wrapped the JSON
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]          # drop opening fence line
+        cleaned = cleaned.rsplit("```", 1)[0].strip()  # drop closing fence
+
     try:
-        parsed = json.loads(raw_text)
+        parsed = json.loads(cleaned)
         if not isinstance(parsed, list):
             raise ValueError("Expected a JSON array at the top level.")
     except (json.JSONDecodeError, ValueError) as exc:
