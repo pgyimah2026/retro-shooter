@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MEC Automation Tool</title>
+  <style>
+    :root {
+      --navy:    #1F497D;
+      --navy-dk: #163660;
+      --blue-lt: #EBF3FB;
+      --blue-md: #D9E1F2;
+      --green:   #E2EFDA;
+      --green-dk:#375623;
+      --red:     #FFC7CE;
+      --red-dk:  #9C0006;
+      --yellow:  #FFEB9C;
+      --grey:    #F2F2F2;
+      --grey-md: #CCCCCC;
+      --grey-dk: #666666;
+      --shadow:  0 2px 8px rgba(0,0,0,0.09);
+      --radius:  6px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      font-size: 14px;
+      background: #eef1f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      color: #fff;
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .logo {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; letter-spacing: -1px;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header p  { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    main {
+      max-width: 1020px;
+      margin: 24px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+    }
+    .full { grid-column: 1 / -1; }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-hdr {
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .card-body { padding: 18px; }
+
+    /* ── Form elements ───────────────────────────────────────── */
+    .field { margin-bottom: 14px; }
+    label.lbl {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--grey-dk);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    select, input[type="month"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--grey-md);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #333;
+      background: #fff;
+      transition: border-color .15s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 2px rgba(31,73,125,0.12);
+    }
+
+    /* ── Mode toggle ─────────────────────────────────────────── */
+    .toggle {
+      display: flex;
+      border: 1px solid var(--grey-md);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .toggle input[type="radio"] { display: none; }
+    .toggle label {
+      flex: 1; text-align: center;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 12px; font-weight: 600;
+      color: var(--grey-dk);
+      background: #fff;
+      border-right: 1px solid var(--grey-md);
+      transition: background .15s, color .15s;
+      text-transform: none; letter-spacing: 0; margin: 0;
+    }
+    .toggle label:last-child { border-right: none; }
+    .toggle input:checked + label { background: var(--navy); color: #fff; }
+
+    /* ── File upload zones ───────────────────────────────────── */
+    .zone {
+      border: 2px dashed var(--grey-md);
+      border-radius: 4px;
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .zone:hover, .zone.drag { border-color: var(--navy); background: var(--blue-lt); }
+    .zone.filled { border-style: solid; border-color: var(--navy); background: var(--blue-lt); }
+    .zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0;
+      cursor: pointer; width: 100%; height: 100%;
+    }
+    .zone-icon { font-size: 20px; }
+    .zone-hint { font-size: 11px; color: var(--grey-dk); margin-top: 3px; }
+    .zone-name { font-size: 12px; color: var(--navy); font-weight: 600; margin-top: 3px; }
+
+    /* ── Run button ──────────────────────────────────────────── */
+    .btn-run {
+      width: 100%; padding: 12px;
+      background: var(--navy); color: #fff;
+      border: none; border-radius: 4px;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+      letter-spacing: 1px; cursor: pointer;
+      transition: background .15s; margin-top: 6px;
+    }
+    .btn-run:hover:not(:disabled) { background: var(--navy-dk); }
+    .btn-run:disabled { background: var(--grey-md); cursor: not-allowed; }
+
+    /* ── Status panel ────────────────────────────────────────── */
+    #status-card { display: none; }
+
+    .progress-track {
+      background: var(--grey); border-radius: 20px;
+      height: 8px; overflow: hidden; margin-bottom: 6px;
+    }
+    .progress-fill {
+      height: 100%; background: var(--navy);
+      border-radius: 20px; transition: width .4s ease; width: 0%;
+    }
+    .progress-step { font-size: 12px; color: var(--grey-dk); text-align: center; }
+
+    /* Stats */
+    .stats { display: flex; gap: 10px; margin: 16px 0; }
+    .stat  {
+      flex: 1; background: var(--blue-lt);
+      border-radius: 4px; padding: 10px 8px; text-align: center;
+    }
+    .stat .val { font-size: 20px; font-weight: 700; color: var(--navy); }
+    .stat .lbl { font-size: 10px; color: var(--grey-dk); text-transform: uppercase; margin-top: 2px; }
+
+    /* Alerts */
+    .alert {
+      padding: 9px 13px; border-radius: 4px;
+      font-size: 12px; margin-bottom: 8px;
+    }
+    .alert-ok   { background: var(--green);  color: var(--green-dk); }
+    .alert-warn { background: var(--yellow); color: #7d5700; }
+    .alert-err  { background: var(--red);    color: var(--red-dk); }
+
+    /* Download links */
+    .dl-links { margin-top: 12px; }
+    .dl-lbl { font-size: 10px; font-weight: 700; color: var(--grey-dk); text-transform: uppercase; margin-bottom: 8px; }
+    .dl-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border: 1px solid var(--grey-md); border-radius: 4px;
+      text-decoration: none; color: var(--navy);
+      font-weight: 600; font-size: 12px;
+      transition: background .15s; background: #fff;
+      margin-bottom: 7px;
+    }
+    .dl-btn:hover { background: var(--blue-lt); border-color: var(--navy); }
+    .dl-ext {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 6px; border-radius: 3px;
+      background: var(--navy); color: #fff; flex-shrink: 0;
+    }
+
+    /* ── History table ───────────────────────────────────────── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      background: var(--navy); color: #fff;
+      padding: 8px 12px; text-align: left;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--grey); white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--blue-lt); }
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 10px; font-size: 10px; font-weight: 700;
+    }
+    .ok   { background: var(--green);  color: var(--green-dk); }
+    .warn { background: var(--yellow); color: #7d5700; }
+    .fail { background: var(--red);    color: var(--red-dk); }
+
+    .model-row { display: none; }
+    .model-row.show { display: block; }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; }
+      .full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ME</div>
+  <div>
+    <h1>MEC Automation Tool</h1>
+    <p>Month-End Close &nbsp;|&nbsp; Williams &amp; Partners, LLP</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Run Close form ─────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-hdr">Run Close</div>
+    <div class="card-body">
+
+      <div class="field">
+        <label class="lbl">Client</label>
+        <select id="sel-client">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Period</label>
+        <input type="month" id="inp-month">
+      </div>
+
+      <div class="field">
+        <label class="lbl">Mode</label>
+        <div class="toggle">
+          <input type="radio" name="mode" id="m-full"  value="full" checked>
+          <label for="m-full">Full &mdash; AI Commentary</label>
+          <input type="radio" name="mode" id="m-quick" value="quick">
+          <label for="m-quick">Quick &mdash; No AI</label>
+        </div>
+      </div>
+
+      <div class="field model-row" id="model-row">
+        <label class="lbl">AI Model</label>
+        <select id="sel-model">
+          <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
+          <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
+          <option value="opus">Opus 4.7 &mdash; Most Capable</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Current Period Trial Balance</label>
+        <div class="zone" id="zone-cur">
+          <input type="file" id="file-cur" accept=".xlsx,.xls,.csv">
+          <div class="zone-icon">📄</div>
+          <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+          <div class="zone-name" id="name-cur"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">Prior Period Trial Balance</label>
+        <div class="zone" id="zone-pri">
+          <input type="file" id="file-pri" accept=".xlsx,.xls,.csv">
+          <div class="zone-icon">📄</div>
+          <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+          <div class="zone-name" id="name-pri"></div>
+        </div>
+      </div>
+
+      <button class="btn-run" id="btn-run" onclick="submitRun()">RUN CLOSE</button>
+
+    </div>
+  </div>
+
+  <!-- ── Status / Results ───────────────────────────────────── -->
+  <div class="card" id="status-card">
+    <div class="card-hdr" id="status-hdr">Running...</div>
+    <div class="card-body">
+
+      <div class="progress-track">
+        <div class="progress-fill" id="prog-fill"></div>
+      </div>
+      <div class="progress-step" id="prog-step">Starting...</div>
+
+      <div id="results" style="display:none; margin-top:16px;">
+        <div class="stats">
+          <div class="stat"><div class="val" id="s-accounts">--</div><div class="lbl">Accounts</div></div>
+          <div class="stat"><div class="val" id="s-flagged">--</div><div class="lbl">Flagged</div></div>
+          <div class="stat"><div class="val" id="s-cost">--</div><div class="lbl">AI Cost</div></div>
+          <div class="stat"><div class="val" id="s-time">--</div><div class="lbl">Elapsed</div></div>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="dl-links">
+          <div class="dl-lbl">Downloads</div>
+          <div id="dl-links"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Run History ────────────────────────────────────────── -->
+  <div class="card full">
+    <div class="card-hdr">Run History</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Finished</th>
+            <th>Client</th>
+            <th>Period</th>
+            <th>Mode</th>
+            <th>Status</th>
+            <th style="text-align:right">Accounts</th>
+            <th style="text-align:right">Flagged</th>
+            <th style="text-align:right">AI Cost</th>
+            <th style="text-align:right">Time</th>
+          </tr>
+        </thead>
+        <tbody id="hist-body">
+          <tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:20px">Loading history...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let _timer = null;
+let _jobId = null;
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  loadClients();
+  loadHistory();
+
+  // Default month to current month
+  const d = new Date();
+  document.getElementById('inp-month').value =
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  // Mode toggle shows/hides model row
+  document.querySelectorAll('input[name="mode"]').forEach(r =>
+    r.addEventListener('change', () => {
+      document.getElementById('model-row').classList.toggle('show', r.value === 'full' && r.checked);
+    })
+  );
+  document.getElementById('model-row').classList.add('show');
+
+  // File zones
+  wireZone('zone-cur', 'file-cur', 'name-cur');
+  wireZone('zone-pri', 'file-pri', 'name-pri');
+});
+
+// ---------------------------------------------------------------------------
+// Clients
+// ---------------------------------------------------------------------------
+async function loadClients() {
+  try {
+    const r = await fetch('/api/clients');
+    const list = await r.json();
+    const sel = document.getElementById('sel-client');
+    sel.innerHTML = list.length
+      ? list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
+      : '<option value="">No clients found</option>';
+  } catch {
+    document.getElementById('sel-client').innerHTML = '<option value="">Error loading clients</option>';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// File zones
+// ---------------------------------------------------------------------------
+function wireZone(zoneId, inputId, nameId) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const nameEl= document.getElementById(nameId);
+
+  const pick = f => { nameEl.textContent = f.name; zone.classList.add('filled'); };
+
+  input.addEventListener('change', () => { if (input.files[0]) pick(input.files[0]); });
+
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; pick(f);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Submit
+// ---------------------------------------------------------------------------
+async function submitRun() {
+  const client  = document.getElementById('sel-client').value;
+  const month   = document.getElementById('inp-month').value;
+  const mode    = document.querySelector('input[name="mode"]:checked').value;
+  const model   = document.getElementById('sel-model').value;
+  const curFile = document.getElementById('file-cur').files[0];
+  const priFile = document.getElementById('file-pri').files[0];
+
+  if (!client || !month) { alert('Please select a client and period.'); return; }
+  if (!curFile)           { alert('Please upload the current period trial balance.'); return; }
+  if (!priFile)           { alert('Please upload the prior period trial balance.'); return; }
+
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true;
+  btn.textContent = 'RUNNING...';
+
+  // Reset panel
+  document.getElementById('status-card').style.display = 'block';
+  document.getElementById('status-hdr').textContent = 'Running...';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('alerts').innerHTML = '';
+  setProgress(3, 'Uploading files...');
+
+  const fd = new FormData();
+  fd.append('client_id', client);
+  fd.append('month', month);
+  fd.append('mode', mode);
+  fd.append('model', model);
+  fd.append('current_tb', curFile);
+  fd.append('prior_tb',   priFile);
+
+  try {
+    const r = await fetch('/api/run', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.error) { showError(data.error); resetBtn(); return; }
+    _jobId = data.job_id;
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(poll, 1500);
+  } catch (e) {
+    showError('Network error: ' + e.message); resetBtn();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Polling
+// ---------------------------------------------------------------------------
+async function poll() {
+  if (!_jobId) return;
+  try {
+    const r = await fetch(`/api/status/${_jobId}`);
+    const j = await r.json();
+    setProgress(j.progress || 0, j.step || '...');
+    if (j.status === 'complete' || j.status === 'error') {
+      clearInterval(_timer); _timer = null;
+      onDone(j);
+    }
+  } catch { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
+// Completion
+// ---------------------------------------------------------------------------
+function onDone(j) {
+  resetBtn();
+  const ok = j.status === 'complete';
+  document.getElementById('status-hdr').textContent = ok ? 'Complete' : 'Failed';
+  setProgress(100, ok ? 'Done' : 'Failed');
+
+  document.getElementById('s-accounts').textContent = j.accounts ?? '--';
+  document.getElementById('s-flagged').textContent  = j.flagged  ?? '--';
+  document.getElementById('s-cost').textContent     = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
+  document.getElementById('s-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+
+  const alertBox = document.getElementById('alerts');
+  alertBox.innerHTML = '';
+  if (j.errors && j.errors.length) {
+    j.errors.forEach(e => alertBox.innerHTML += `<div class="alert alert-warn">${esc(e)}</div>`);
+  } else if (ok) {
+    alertBox.innerHTML = '<div class="alert alert-ok">All outputs generated successfully.</div>';
+  }
+
+  const dlBox = document.getElementById('dl-links');
+  dlBox.innerHTML = '';
+  if (j.outputs) {
+    Object.entries(j.outputs).forEach(([label, filename]) => {
+      const ext = filename.split('.').pop().toUpperCase();
+      dlBox.innerHTML +=
+        `<a class="dl-btn" href="/api/download/${_jobId}/${encodeURIComponent(filename)}" download="${esc(filename)}">
+          <span class="dl-ext">${ext}</span>
+          <span>${esc(label)}: ${esc(filename)}</span>
+        </a>`;
+    });
+  }
+
+  document.getElementById('results').style.display = 'block';
+  loadHistory();
+}
+
+// ---------------------------------------------------------------------------
+// History
+// ---------------------------------------------------------------------------
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/history');
+    const rows = await r.json();
+    const tbody = document.getElementById('hist-body');
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:20px">No run history yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const s     = r.status || 'unknown';
+      const cls   = s === 'success' ? 'ok' : s === 'partial' ? 'warn' : 'fail';
+      const lbl   = s === 'success' ? 'OK' : s === 'partial' ? 'WARN' : 'FAIL';
+      const cost  = r.cost_usd > 0 ? `$${Number(r.cost_usd).toFixed(4)}` : '--';
+      const mode  = (r.mode || '?')[0] === 'f' ? 'Full' : 'Quick';
+      return `<tr>
+        <td>${fmtTs(r.finished)}</td>
+        <td>${esc(r.client_id  || '--')}</td>
+        <td>${esc(r.period     || '--')}</td>
+        <td>${mode}</td>
+        <td><span class="badge ${cls}">${lbl}</span></td>
+        <td style="text-align:right">${r.accounts ?? '--'}</td>
+        <td style="text-align:right">${r.flagged  ?? '--'}</td>
+        <td style="text-align:right">${cost}</td>
+        <td style="text-align:right">${r.elapsed_s ? r.elapsed_s + 's' : '--'}</td>
+      </tr>`;
+    }).join('');
+  } catch {
+    document.getElementById('hist-body').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;color:var(--grey-dk)">Error loading history.</td></tr>';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function setProgress(pct, step) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-step').textContent = step;
+}
+function showError(msg) {
+  document.getElementById('status-hdr').textContent = 'Error';
+  document.getElementById('alerts').innerHTML = `<div class="alert alert-err">${esc(msg)}</div>`;
+  document.getElementById('results').style.display = 'block';
+}
+function resetBtn() {
+  const btn = document.getElementById('btn-run');
+  btn.disabled = false;
+  btn.textContent = 'RUN CLOSE';
+}
+function fmtTs(iso) {
+  if (!iso) return '--';
+  try { return new Date(iso).toISOString().replace('T', ' ').slice(0, 16); }
+  catch { return (iso || '--').slice(0, 16); }
+}
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>
