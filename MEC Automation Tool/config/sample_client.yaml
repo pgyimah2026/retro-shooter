@@ -1,0 +1,31 @@
+client_name: "Acme Corporation"
+preparer: "Jane Smith, CPA"
+firm: "Smith & Associates"
+
+# Flag an account when BOTH thresholds are exceeded
+variance_threshold_pct: 10      # percent change (absolute value)
+variance_threshold_abs: 5000    # dollar change (absolute value)
+
+# Map group names to account numbers (as strings)
+# Accounts not listed here fall into "Other"
+account_groups:
+  Revenue:
+    - "4000"
+    - "4100"
+    - "4200"
+    - "4300"
+  Cost of Goods Sold:
+    - "5000"
+    - "5100"
+    - "5200"
+  Operating Expenses:
+    - "6000"
+    - "6100"
+    - "6200"
+    - "6300"
+    - "6400"
+    - "6500"
+  Other Income/Expense:
+    - "7000"
+    - "7100"
+    - "8000"

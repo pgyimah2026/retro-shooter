@@ -1,0 +1,463 @@
+{
+  "client_id":   "abc_corporation",
+  "client_name": "ABC Corporation",
+  "preparer":    "Michael Chen, CPA",
+  "firm":        "Williams & Partners, LLP",
+
+  "fiscal_year_end":    "12-31",
+  "variance_threshold": 5.0,
+  "materiality_amount": 2500.0,
+
+  "contact_info": {
+    "firm_name":            "Williams & Partners, LLP",
+    "preparer_name":        "Michael Chen, CPA",
+    "preparer_email":       "mchen@williamspartners.com",
+    "preparer_phone":       "(555) 234-5678",
+    "client_contact_name":  "Sarah Johnson",
+    "client_contact_title": "Chief Financial Officer",
+    "client_contact_email": "sjohnson@abccorporation.com"
+  },
+
+  "report_settings": {
+    "logo_path":             "",
+    "include_ai_commentary": true,
+    "include_je_template":   true,
+    "currency_symbol":       "$",
+    "date_format":           "YYYY-MM-DD",
+    "decimal_places":        2
+  },
+
+  "account_groups": {
+    "Revenue": [
+      "4000", "4100", "4200", "4300"
+    ],
+    "Cost of Goods Sold": [
+      "5000", "5100", "5200", "5300"
+    ],
+    "Operating Expenses": [
+      "6000", "6010", "6100", "6200", "6300",
+      "6400", "6500", "6600", "6700", "6800", "6900"
+    ],
+    "Other Income/Expense": [
+      "7000", "7100", "7200", "8000", "8100", "8200"
+    ]
+  },
+
+  "account_mapping": {
+
+    "1000": {
+      "name": "Cash and Cash Equivalents",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1010": {
+      "name": "Petty Cash",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1100": {
+      "name": "Accounts Receivable",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1110": {
+      "name": "Allowance for Doubtful Accounts",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1200": {
+      "name": "Inventory — Raw Materials",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1210": {
+      "name": "Inventory — Work in Progress",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1220": {
+      "name": "Inventory — Finished Goods",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1300": {
+      "name": "Prepaid Expenses",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1400": {
+      "name": "Other Current Assets",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1500": {
+      "name": "Property, Plant & Equipment",
+      "type": "Asset",
+      "group": "Fixed Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1510": {
+      "name": "Accumulated Depreciation — PP&E",
+      "type": "Asset",
+      "group": "Fixed Assets",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1600": {
+      "name": "Intangible Assets",
+      "type": "Asset",
+      "group": "Fixed Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1610": {
+      "name": "Accumulated Amortization",
+      "type": "Asset",
+      "group": "Fixed Assets",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+
+    "2000": {
+      "name": "Accounts Payable",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2100": {
+      "name": "Accrued Liabilities",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2110": {
+      "name": "Accrued Payroll & Benefits",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2200": {
+      "name": "Current Portion of Long-Term Debt",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2300": {
+      "name": "Deferred Revenue",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2400": {
+      "name": "Other Current Liabilities",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2500": {
+      "name": "Long-Term Debt",
+      "type": "Liability",
+      "group": "Long-Term Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2600": {
+      "name": "Deferred Tax Liability",
+      "type": "Liability",
+      "group": "Long-Term Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+
+    "3000": {
+      "name": "Common Stock",
+      "type": "Equity",
+      "group": "Equity",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "3100": {
+      "name": "Additional Paid-in Capital",
+      "type": "Equity",
+      "group": "Equity",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "3200": {
+      "name": "Retained Earnings",
+      "type": "Equity",
+      "group": "Equity",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "3300": {
+      "name": "Treasury Stock",
+      "type": "Equity",
+      "group": "Equity",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+
+    "4000": {
+      "name": "Product Sales — Domestic",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "4100": {
+      "name": "Product Sales — International",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "4200": {
+      "name": "Service Revenue",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "4300": {
+      "name": "Shipping & Handling Revenue",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "4900": {
+      "name": "Sales Returns & Allowances",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+
+    "5000": {
+      "name": "Raw Materials Used",
+      "type": "Expense",
+      "group": "Cost of Goods Sold",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "5100": {
+      "name": "Direct Labor",
+      "type": "Expense",
+      "group": "Cost of Goods Sold",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "5200": {
+      "name": "Manufacturing Overhead",
+      "type": "Expense",
+      "group": "Cost of Goods Sold",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "5300": {
+      "name": "Freight-In",
+      "type": "Expense",
+      "group": "Cost of Goods Sold",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+
+    "6000": {
+      "name": "Salaries & Wages",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6010": {
+      "name": "Payroll Taxes & Benefits",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6100": {
+      "name": "Rent Expense",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6200": {
+      "name": "Utilities",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6300": {
+      "name": "Office Supplies & Equipment",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6400": {
+      "name": "Insurance Expense",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6500": {
+      "name": "Depreciation & Amortization",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6600": {
+      "name": "Marketing & Advertising",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6700": {
+      "name": "Travel & Entertainment",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6800": {
+      "name": "Professional Fees",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6900": {
+      "name": "Other Operating Expenses",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+
+    "7000": {
+      "name": "Interest Income",
+      "type": "Revenue",
+      "group": "Other Income/Expense",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "7100": {
+      "name": "Gain on Sale of Assets",
+      "type": "Revenue",
+      "group": "Other Income/Expense",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "7200": {
+      "name": "Other Income",
+      "type": "Revenue",
+      "group": "Other Income/Expense",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "8000": {
+      "name": "Interest Expense",
+      "type": "Expense",
+      "group": "Other Income/Expense",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "8100": {
+      "name": "Loss on Sale of Assets",
+      "type": "Expense",
+      "group": "Other Income/Expense",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "8200": {
+      "name": "Income Tax Expense",
+      "type": "Expense",
+      "group": "Other Income/Expense",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    }
+  }
+}

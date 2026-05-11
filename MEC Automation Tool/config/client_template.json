@@ -1,0 +1,108 @@
+{
+  "_meta": {
+    "description": "Client configuration template for the MEC Automation Tool.",
+    "instructions": [
+      "Copy this file to config/<client_id>.json",
+      "Replace every '__REQUIRED__' value with actual data",
+      "account_groups is auto-derived from account_mapping if left empty",
+      "fiscal_year_end must be in MM-DD format, e.g. '12-31' or '06-30'",
+      "variance_threshold is a percentage (5.0 = 5%)",
+      "materiality_amount is an absolute dollar amount"
+    ],
+    "version": "1.0"
+  },
+
+  "client_id":   "__REQUIRED__",
+  "client_name": "__REQUIRED__",
+  "preparer":    "",
+  "firm":        "",
+
+  "fiscal_year_end":    "12-31",
+  "variance_threshold": 5.0,
+  "materiality_amount": 1000.0,
+
+  "contact_info": {
+    "firm_name":            "",
+    "preparer_name":        "",
+    "preparer_email":       "",
+    "preparer_phone":       "",
+    "client_contact_name":  "",
+    "client_contact_title": "",
+    "client_contact_email": ""
+  },
+
+  "report_settings": {
+    "logo_path":              "",
+    "include_ai_commentary":  true,
+    "include_je_template":    true,
+    "currency_symbol":        "$",
+    "date_format":            "YYYY-MM-DD",
+    "decimal_places":         2
+  },
+
+  "account_groups": {
+    "Revenue":               [],
+    "Cost of Goods Sold":    [],
+    "Operating Expenses":    [],
+    "Other Income/Expense":  []
+  },
+
+  "account_mapping": {
+    "1000": {
+      "name": "Cash and Cash Equivalents",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "1100": {
+      "name": "Accounts Receivable",
+      "type": "Asset",
+      "group": "Current Assets",
+      "normal_balance": "debit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "2000": {
+      "name": "Accounts Payable",
+      "type": "Liability",
+      "group": "Current Liabilities",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "3200": {
+      "name": "Retained Earnings",
+      "type": "Equity",
+      "group": "Equity",
+      "normal_balance": "credit",
+      "statement": "balance_sheet",
+      "active": true
+    },
+    "4000": {
+      "name": "Sales Revenue",
+      "type": "Revenue",
+      "group": "Revenue",
+      "normal_balance": "credit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "5000": {
+      "name": "Cost of Goods Sold",
+      "type": "Expense",
+      "group": "Cost of Goods Sold",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    },
+    "6000": {
+      "name": "Salaries & Wages",
+      "type": "Expense",
+      "group": "Operating Expenses",
+      "normal_balance": "debit",
+      "statement": "income_statement",
+      "active": true
+    }
+  }
+}
