@@ -354,6 +354,103 @@ def poll_and_retrieve(
         time.sleep(poll_interval)
 
 
+def generate_bank_rec_commentary(
+    rec_result: dict,
+    model: str = _DEFAULT_MODEL,
+    api_key: Optional[str] = None,
+) -> list[dict]:
+    """Generate AI explanations for bank reconciliation exceptions.
+
+    Args:
+        rec_result: Return value from bank_rec.reconcile().
+        model:      Anthropic model ID or short alias ("haiku", "sonnet", "opus").
+        api_key:    Optional API key; falls back to ANTHROPIC_API_KEY env var.
+
+    Returns:
+        List of dicts with keys: source, date, description, amount, category,
+        explanation, action. Empty list if there are no exceptions.
+    """
+    bank_only = rec_result.get("bank_only", pd.DataFrame())
+    gl_only   = rec_result.get("gl_only",   pd.DataFrame())
+
+    if (
+        (isinstance(bank_only, pd.DataFrame) and bank_only.empty) and
+        (isinstance(gl_only,   pd.DataFrame) and gl_only.empty)
+    ):
+        log.info("No bank rec exceptions -- skipping AI commentary.")
+        return []
+
+    model  = _resolve_model(model)
+    client = _make_client(api_key)
+
+    items = []
+    for _, row in bank_only.iterrows():
+        d = row["Date"]
+        items.append({
+            "source":      "Bank Statement",
+            "date":        str(d.date()) if hasattr(d, "date") else str(d),
+            "description": str(row.get("Description", "")),
+            "amount":      float(row["Amount"]),
+            "category":    str(row.get("Category", "")),
+        })
+    for _, row in gl_only.iterrows():
+        d = row["Date"]
+        items.append({
+            "source":      "GL Subledger",
+            "date":        str(d.date()) if hasattr(d, "date") else str(d),
+            "description": str(row.get("Description", "")),
+            "amount":      float(row["Amount"]),
+            "category":    str(row.get("Category", "")),
+        })
+
+    block = json.dumps(items, indent=2)
+    user_message = (
+        "You are a CPA reviewing bank reconciliation exceptions.\n"
+        "For each unmatched item below provide:\n"
+        "  1. A 1-2 sentence explanation of the most likely reason it is unmatched.\n"
+        "  2. A brief suggested action (e.g., 'Record journal entry for interest income',\n"
+        "     'Confirm wire cleared -- resubmit if not received', 'Void and reissue check').\n\n"
+        f"Exceptions:\n{block}\n\n"
+        "Return a JSON array where each element has:\n"
+        '  "index":       integer (1-based, matching item order above)\n'
+        '  "explanation": string (1-2 sentences)\n'
+        '  "action":      string (brief suggested action)\n\n'
+        "Return ONLY the JSON array -- no preamble, no trailing text."
+    )
+
+    log.debug("Calling %s for bank rec commentary (%d exceptions).", model, len(items))
+    raw_text = _call_api(client, model, user_message)
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        if not isinstance(parsed, list):
+            raise ValueError("Expected a JSON array.")
+    except (json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not parse bank rec commentary response: %s", exc)
+        parsed = []
+
+    by_index = {item.get("index"): item for item in parsed}
+    result   = []
+    for i, item in enumerate(items, start=1):
+        ai = by_index.get(i, {})
+        result.append({
+            "source":      item["source"],
+            "date":        item["date"],
+            "description": item["description"],
+            "amount":      item["amount"],
+            "category":    item["category"],
+            "explanation": ai.get("explanation", "[No explanation returned.]"),
+            "action":      ai.get("action",      "[No action suggested.]"),
+        })
+
+    return result
+
+
 def load_batch_job(json_path: str) -> dict:
     """Load batch metadata previously saved by generate_commentary (batch mode).
 

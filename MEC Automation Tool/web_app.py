@@ -27,8 +27,9 @@ except ImportError:
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
+from bank_rec import export_reconciliation, load_bank_statement, load_gl_subledger, reconcile
 from close_automation import _load_single_period
-from commentary_generator import generate_commentary
+from commentary_generator import generate_bank_rec_commentary, generate_commentary
 from config_manager import list_clients, load_client_config
 from je_generator import create_je_template
 from report_generator import generate_report
@@ -156,6 +157,84 @@ def api_download(job_id, filename):
         return jsonify({"error": "File not found"}), 404
 
     return send_file(str(file_path), as_attachment=True, download_name=filename)
+
+
+@app.route("/api/bank_rec", methods=["POST"])
+def api_bank_rec():
+    client_id    = request.form.get("client_id", "").strip()
+    month        = request.form.get("month", "").strip()
+    mode         = request.form.get("mode", "quick").strip()
+    model_key    = request.form.get("model", "sonnet").strip()
+    model_id     = _MODEL_ALIASES.get(model_key, model_key)
+    account_name = request.form.get("account_name", "Cash").strip()
+    bank_file    = request.files.get("bank_statement")
+    gl_file      = request.files.get("gl_subledger")
+
+    try:
+        bank_ending = float(request.form.get("bank_ending_balance", "0").replace(",", ""))
+        gl_ending   = float(request.form.get("gl_ending_balance",   "0").replace(",", ""))
+    except ValueError:
+        return jsonify({"error": "Ending balances must be numeric."}), 400
+
+    if not all([client_id, month, bank_file, gl_file]):
+        return jsonify({"error": "Missing required fields."}), 400
+
+    try:
+        config = load_client_config(client_id, config_dir=str(_HERE / "config"))
+    except Exception as exc:
+        return jsonify({"error": f"Config error: {exc}"}), 400
+
+    tmp_dir   = Path(tempfile.mkdtemp())
+    bank_path = tmp_dir / (bank_file.filename or "bank_statement.xlsx")
+    gl_path   = tmp_dir / (gl_file.filename   or "gl_subledger.xlsx")
+    bank_file.save(str(bank_path))
+    gl_file.save(str(gl_path))
+
+    output_dir = _HERE / "output" / client_id / month
+    job_id     = str(uuid.uuid4())[:8]
+
+    with _lock:
+        _jobs[job_id] = {
+            "job_id":        job_id,
+            "job_type":      "bank_rec",
+            "client_id":     client_id,
+            "client_name":   config.get("client_name", client_id),
+            "month":         month,
+            "account_name":  account_name,
+            "mode":          mode,
+            "model":         model_id,
+            "status":        "running",
+            "step":          "Starting",
+            "progress":      0,
+            "outputs":       {},
+            "errors":        [],
+            "output_dir":    str(output_dir),
+            "started":       datetime.now().isoformat(),
+            "matched":       0,
+            "exceptions":    0,
+            "difference":    0.0,
+            "is_reconciled": False,
+            "cost_usd":      0.0,
+            "elapsed_s":     0.0,
+        }
+
+    threading.Thread(
+        target=_bank_rec_worker,
+        args=(job_id, client_id, month, mode, model_id, account_name,
+              bank_path, gl_path, bank_ending, gl_ending, output_dir, config, tmp_dir),
+        daemon=True,
+    ).start()
+
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/bank_rec_status/<job_id>")
+def api_bank_rec_status(job_id):
+    with _lock:
+        job = _jobs.get(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(job)
 
 
 @app.route("/api/history")
@@ -290,6 +369,101 @@ def _worker(job_id, client_id, month, mode, model_id,
                 "elapsed_s": elapsed,
             })
         rl.finish(rid, "failed", [], errors + [str(exc)], elapsed_s=elapsed)
+
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Bank rec background worker
+# ---------------------------------------------------------------------------
+
+def _bank_rec_worker(
+    job_id, client_id, month, mode, model_id, account_name,
+    bank_path, gl_path, bank_ending, gl_ending, output_dir, config, tmp_dir,
+):
+    start   = time.monotonic()
+    outputs = {}
+    errors  = []
+    est_cost = 0.0
+
+    def _step(label, pct):
+        with _lock:
+            _jobs[job_id].update({"step": label, "progress": pct})
+
+    try:
+        _step("Loading bank statement", 15)
+        bank_df = load_bank_statement(bank_path)
+
+        _step("Loading GL subledger", 30)
+        gl_df = load_gl_subledger(gl_path)
+
+        _step("Running reconciliation", 50)
+        result = reconcile(bank_df, gl_df, bank_ending, gl_ending)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        commentary = []
+        if mode == "full":
+            _step("Generating AI commentary", 65)
+            n_exc = result["summary"]["bank_only_count"] + result["summary"]["gl_only_count"]
+            if n_exc > 0:
+                if os.getenv("ANTHROPIC_API_KEY"):
+                    try:
+                        commentary = generate_bank_rec_commentary(result, model=model_id)
+                        pricing    = _PRICING.get(model_id, _PRICING["claude-sonnet-4-6"])
+                        est_cost   = (
+                            (100 + 80 * n_exc) / 1_000_000 * pricing["input"] +
+                            (150 * n_exc)      / 1_000_000 * pricing["output"]
+                        )
+                    except Exception as exc:
+                        errors.append(f"AI commentary failed: {exc}")
+                else:
+                    errors.append("ANTHROPIC_API_KEY not set -- AI commentary skipped")
+
+        _step("Exporting reconciliation workbook", 85)
+        year_n, mon_n = map(int, month.split("-"))
+        period_label  = datetime(year_n, mon_n, 1).strftime("%B %Y")
+        rec_path      = output_dir / f"bank_rec_{client_id}_{month}.xlsx"
+        export_reconciliation(
+            result, rec_path,
+            commentary=commentary or None,
+            period_label=period_label,
+            client_name=config.get("client_name", client_id),
+        )
+        outputs["Bank Rec Workbook"] = rec_path
+
+        elapsed = round(time.monotonic() - start, 1)
+        status  = "success" if not errors else "partial"
+        s       = result["summary"]
+
+        with _lock:
+            _jobs[job_id].update({
+                "status":        "complete",
+                "run_status":    status,
+                "step":          "Done",
+                "progress":      100,
+                "outputs":       {k: v.name for k, v in outputs.items()},
+                "errors":        errors,
+                "elapsed_s":     elapsed,
+                "matched":       s["matched_count"],
+                "exceptions":    s["bank_only_count"] + s["gl_only_count"],
+                "difference":    s["difference"],
+                "is_reconciled": result["is_reconciled"],
+                "cost_usd":      round(est_cost, 4),
+            })
+
+    except Exception as exc:
+        elapsed = round(time.monotonic() - start, 1)
+        with _lock:
+            _jobs[job_id].update({
+                "status":    "error",
+                "run_status": "failed",
+                "step":      "Failed",
+                "progress":  100,
+                "errors":    errors + [str(exc)],
+                "elapsed_s": elapsed,
+            })
 
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)

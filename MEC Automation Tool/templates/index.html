@@ -234,6 +234,48 @@
     .model-row { display: none; }
     .model-row.show { display: block; }
 
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs {
+      display: flex; gap: 0;
+      border-bottom: 2px solid var(--navy);
+      margin-bottom: 0;
+    }
+    .tab-btn {
+      padding: 9px 22px;
+      font-size: 12px; font-weight: 700; font-family: inherit;
+      color: var(--grey-dk); background: #fff;
+      border: 1px solid var(--grey-md); border-bottom: none;
+      border-radius: 4px 4px 0 0; cursor: pointer;
+      transition: background .15s, color .15s;
+      margin-right: 4px;
+    }
+    .tab-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Balance input ───────────────────────────────────────── */
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--grey-md);
+      border-radius: 4px;
+      font-size: 13px; font-family: inherit;
+      color: #333; background: #fff;
+      transition: border-color .15s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 2px rgba(31,73,125,0.12);
+    }
+
+    /* ── Rec status tile ─────────────────────────────────────── */
+    .rec-banner {
+      padding: 10px 14px; border-radius: 4px;
+      font-size: 13px; font-weight: 700; text-align: center;
+      margin-bottom: 10px;
+    }
+
     @media (max-width: 700px) {
       main { grid-template-columns: 1fr; }
       .full { grid-column: 1; }
@@ -252,64 +294,149 @@
 
 <main>
 
-  <!-- ── Run Close form ─────────────────────────────────────── -->
-  <div class="card">
-    <div class="card-hdr">Run Close</div>
-    <div class="card-body">
+  <!-- ── Left panel: tabs ───────────────────────────────────── -->
+  <div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('close', this)">Month-End Close</button>
+      <button class="tab-btn"        onclick="switchTab('bankrec', this)">Bank Rec</button>
+    </div>
 
-      <div class="field">
-        <label class="lbl">Client</label>
-        <select id="sel-client">
-          <option value="">Loading...</option>
-        </select>
-      </div>
+    <!-- Tab 1: Run Close -->
+    <div class="card tab-pane active" id="tab-close" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+      <div class="card-hdr">Run Close</div>
+      <div class="card-body">
 
-      <div class="field">
-        <label class="lbl">Period</label>
-        <input type="month" id="inp-month">
-      </div>
-
-      <div class="field">
-        <label class="lbl">Mode</label>
-        <div class="toggle">
-          <input type="radio" name="mode" id="m-full"  value="full" checked>
-          <label for="m-full">Full &mdash; AI Commentary</label>
-          <input type="radio" name="mode" id="m-quick" value="quick">
-          <label for="m-quick">Quick &mdash; No AI</label>
+        <div class="field">
+          <label class="lbl">Client</label>
+          <select id="sel-client">
+            <option value="">Loading...</option>
+          </select>
         </div>
-      </div>
 
-      <div class="field model-row" id="model-row">
-        <label class="lbl">AI Model</label>
-        <select id="sel-model">
-          <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
-          <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
-          <option value="opus">Opus 4.7 &mdash; Most Capable</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label class="lbl">Current Period Trial Balance</label>
-        <div class="zone" id="zone-cur">
-          <input type="file" id="file-cur" accept=".xlsx,.xls,.csv">
-          <div class="zone-icon">📄</div>
-          <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
-          <div class="zone-name" id="name-cur"></div>
+        <div class="field">
+          <label class="lbl">Period</label>
+          <input type="month" id="inp-month">
         </div>
-      </div>
 
-      <div class="field">
-        <label class="lbl">Prior Period Trial Balance</label>
-        <div class="zone" id="zone-pri">
-          <input type="file" id="file-pri" accept=".xlsx,.xls,.csv">
-          <div class="zone-icon">📄</div>
-          <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
-          <div class="zone-name" id="name-pri"></div>
+        <div class="field">
+          <label class="lbl">Mode</label>
+          <div class="toggle">
+            <input type="radio" name="mode" id="m-full"  value="full" checked>
+            <label for="m-full">Full &mdash; AI Commentary</label>
+            <input type="radio" name="mode" id="m-quick" value="quick">
+            <label for="m-quick">Quick &mdash; No AI</label>
+          </div>
         </div>
+
+        <div class="field model-row" id="model-row">
+          <label class="lbl">AI Model</label>
+          <select id="sel-model">
+            <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
+            <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
+            <option value="opus">Opus 4.7 &mdash; Most Capable</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Current Period Trial Balance</label>
+          <div class="zone" id="zone-cur">
+            <input type="file" id="file-cur" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📄</div>
+            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-cur"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Prior Period Trial Balance</label>
+          <div class="zone" id="zone-pri">
+            <input type="file" id="file-pri" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📄</div>
+            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-pri"></div>
+          </div>
+        </div>
+
+        <button class="btn-run" id="btn-run" onclick="submitRun()">RUN CLOSE</button>
+
       </div>
+    </div>
 
-      <button class="btn-run" id="btn-run" onclick="submitRun()">RUN CLOSE</button>
+    <!-- Tab 2: Bank Rec -->
+    <div class="card tab-pane" id="tab-bankrec" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+      <div class="card-hdr">Bank Reconciliation</div>
+      <div class="card-body">
 
+        <div class="field">
+          <label class="lbl">Client</label>
+          <select id="br-client">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Period</label>
+          <input type="month" id="br-month">
+        </div>
+
+        <div class="field">
+          <label class="lbl">Bank Account Name</label>
+          <input type="text" id="br-account" placeholder="e.g. Main Checking - Chase">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="field">
+          <div>
+            <label class="lbl">Bank Statement Ending Balance</label>
+            <input type="text" id="br-bank-bal" placeholder="86628.50">
+          </div>
+          <div>
+            <label class="lbl">GL Cash Account Ending Balance</label>
+            <input type="text" id="br-gl-bal" placeholder="92861.00">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Mode</label>
+          <div class="toggle">
+            <input type="radio" name="br-mode" id="br-full"  value="full" checked>
+            <label for="br-full">Full &mdash; AI Exception Analysis</label>
+            <input type="radio" name="br-mode" id="br-quick" value="quick">
+            <label for="br-quick">Quick &mdash; No AI</label>
+          </div>
+        </div>
+
+        <div class="field model-row" id="br-model-row">
+          <label class="lbl">AI Model</label>
+          <select id="br-model">
+            <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
+            <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
+            <option value="opus">Opus 4.7 &mdash; Most Capable</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Bank Statement</label>
+          <div class="zone" id="zone-bank">
+            <input type="file" id="file-bank" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">🏦</div>
+            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-bank"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">GL Cash Subledger</label>
+          <div class="zone" id="zone-gl">
+            <input type="file" id="file-gl" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📒</div>
+            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-gl"></div>
+          </div>
+        </div>
+
+        <button class="btn-run" id="btn-rec" onclick="submitRec()">RUN BANK REC</button>
+
+      </div>
     </div>
   </div>
 
@@ -324,11 +451,19 @@
       <div class="progress-step" id="prog-step">Starting...</div>
 
       <div id="results" style="display:none; margin-top:16px;">
-        <div class="stats">
+        <!-- Close stats -->
+        <div class="stats" id="stats-close">
           <div class="stat"><div class="val" id="s-accounts">--</div><div class="lbl">Accounts</div></div>
           <div class="stat"><div class="val" id="s-flagged">--</div><div class="lbl">Flagged</div></div>
           <div class="stat"><div class="val" id="s-cost">--</div><div class="lbl">AI Cost</div></div>
           <div class="stat"><div class="val" id="s-time">--</div><div class="lbl">Elapsed</div></div>
+        </div>
+        <!-- Bank rec stats -->
+        <div class="stats" id="stats-rec" style="display:none">
+          <div class="stat"><div class="val" id="r-matched">--</div><div class="lbl">Matched</div></div>
+          <div class="stat"><div class="val" id="r-exceptions">--</div><div class="lbl">Exceptions</div></div>
+          <div class="stat"><div class="val" id="r-cost">--</div><div class="lbl">AI Cost</div></div>
+          <div class="stat"><div class="val" id="r-time">--</div><div class="lbl">Elapsed</div></div>
         </div>
 
         <div id="alerts"></div>
@@ -373,8 +508,9 @@
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let _timer = null;
-let _jobId = null;
+let _timer    = null;
+let _jobId    = null;
+let _jobType  = 'close';   // 'close' | 'bankrec'
 
 // ---------------------------------------------------------------------------
 // Init
@@ -383,12 +519,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loadClients();
   loadHistory();
 
-  // Default month to current month
-  const d = new Date();
-  document.getElementById('inp-month').value =
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const now = new Date();
+  const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('inp-month').value = monthVal;
+  document.getElementById('br-month').value  = monthVal;
 
-  // Mode toggle shows/hides model row
+  // Close mode toggle
   document.querySelectorAll('input[name="mode"]').forEach(r =>
     r.addEventListener('change', () => {
       document.getElementById('model-row').classList.toggle('show', r.value === 'full' && r.checked);
@@ -396,24 +532,47 @@ document.addEventListener('DOMContentLoaded', () => {
   );
   document.getElementById('model-row').classList.add('show');
 
+  // Bank rec mode toggle
+  document.querySelectorAll('input[name="br-mode"]').forEach(r =>
+    r.addEventListener('change', () => {
+      document.getElementById('br-model-row').classList.toggle('show', r.value === 'full' && r.checked);
+    })
+  );
+  document.getElementById('br-model-row').classList.add('show');
+
   // File zones
-  wireZone('zone-cur', 'file-cur', 'name-cur');
-  wireZone('zone-pri', 'file-pri', 'name-pri');
+  wireZone('zone-cur',  'file-cur',  'name-cur');
+  wireZone('zone-pri',  'file-pri',  'name-pri');
+  wireZone('zone-bank', 'file-bank', 'name-bank');
+  wireZone('zone-gl',   'file-gl',   'name-gl');
 });
+
+// ---------------------------------------------------------------------------
+// Tab switching
+// ---------------------------------------------------------------------------
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
 
 // ---------------------------------------------------------------------------
 // Clients
 // ---------------------------------------------------------------------------
 async function loadClients() {
   try {
-    const r = await fetch('/api/clients');
+    const r    = await fetch('/api/clients');
     const list = await r.json();
-    const sel = document.getElementById('sel-client');
-    sel.innerHTML = list.length
+    const opts = list.length
       ? list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
       : '<option value="">No clients found</option>';
+    document.getElementById('sel-client').innerHTML = opts;
+    document.getElementById('br-client').innerHTML  = opts;
   } catch {
-    document.getElementById('sel-client').innerHTML = '<option value="">Error loading clients</option>';
+    const err = '<option value="">Error loading clients</option>';
+    document.getElementById('sel-client').innerHTML = err;
+    document.getElementById('br-client').innerHTML  = err;
   }
 }
 
@@ -421,27 +580,23 @@ async function loadClients() {
 // File zones
 // ---------------------------------------------------------------------------
 function wireZone(zoneId, inputId, nameId) {
-  const zone  = document.getElementById(zoneId);
-  const input = document.getElementById(inputId);
-  const nameEl= document.getElementById(nameId);
-
-  const pick = f => { nameEl.textContent = f.name; zone.classList.add('filled'); };
+  const zone   = document.getElementById(zoneId);
+  const input  = document.getElementById(inputId);
+  const nameEl = document.getElementById(nameId);
+  const pick   = f => { nameEl.textContent = f.name; zone.classList.add('filled'); };
 
   input.addEventListener('change', () => { if (input.files[0]) pick(input.files[0]); });
-
   zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
   zone.addEventListener('drop', e => {
     e.preventDefault(); zone.classList.remove('drag');
     const f = e.dataTransfer.files[0];
-    if (f) {
-      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; pick(f);
-    }
+    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; pick(f); }
   });
 }
 
 // ---------------------------------------------------------------------------
-// Submit
+// Submit: Month-End Close
 // ---------------------------------------------------------------------------
 async function submitRun() {
   const client  = document.getElementById('sel-client').value;
@@ -455,34 +610,78 @@ async function submitRun() {
   if (!curFile)           { alert('Please upload the current period trial balance.'); return; }
   if (!priFile)           { alert('Please upload the prior period trial balance.'); return; }
 
+  _jobType = 'close';
   const btn = document.getElementById('btn-run');
-  btn.disabled = true;
-  btn.textContent = 'RUNNING...';
-
-  // Reset panel
-  document.getElementById('status-card').style.display = 'block';
-  document.getElementById('status-hdr').textContent = 'Running...';
-  document.getElementById('results').style.display = 'none';
-  document.getElementById('alerts').innerHTML = '';
-  setProgress(3, 'Uploading files...');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  resetPanel('Running...');
 
   const fd = new FormData();
-  fd.append('client_id', client);
-  fd.append('month', month);
-  fd.append('mode', mode);
-  fd.append('model', model);
+  fd.append('client_id',  client);
+  fd.append('month',      month);
+  fd.append('mode',       mode);
+  fd.append('model',      model);
   fd.append('current_tb', curFile);
   fd.append('prior_tb',   priFile);
 
   try {
     const r = await fetch('/api/run', { method: 'POST', body: fd });
-    const data = await r.json();
-    if (data.error) { showError(data.error); resetBtn(); return; }
-    _jobId = data.job_id;
+    const d = await r.json();
+    if (d.error) { showError(d.error); document.getElementById('btn-run').disabled = false; document.getElementById('btn-run').textContent = 'RUN CLOSE'; return; }
+    _jobId = d.job_id;
     if (_timer) clearInterval(_timer);
     _timer = setInterval(poll, 1500);
   } catch (e) {
-    showError('Network error: ' + e.message); resetBtn();
+    showError('Network error: ' + e.message);
+    document.getElementById('btn-run').disabled = false;
+    document.getElementById('btn-run').textContent = 'RUN CLOSE';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Submit: Bank Rec
+// ---------------------------------------------------------------------------
+async function submitRec() {
+  const client   = document.getElementById('br-client').value;
+  const month    = document.getElementById('br-month').value;
+  const acct     = document.getElementById('br-account').value.trim();
+  const mode     = document.querySelector('input[name="br-mode"]:checked').value;
+  const model    = document.getElementById('br-model').value;
+  const bankBal  = document.getElementById('br-bank-bal').value.trim();
+  const glBal    = document.getElementById('br-gl-bal').value.trim();
+  const bankFile = document.getElementById('file-bank').files[0];
+  const glFile   = document.getElementById('file-gl').files[0];
+
+  if (!client || !month)  { alert('Please select a client and period.'); return; }
+  if (!bankBal || !glBal) { alert('Please enter both ending balances.'); return; }
+  if (!bankFile)           { alert('Please upload the bank statement.'); return; }
+  if (!glFile)             { alert('Please upload the GL cash subledger.'); return; }
+
+  _jobType = 'bankrec';
+  const btn = document.getElementById('btn-rec');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  resetPanel('Running Bank Rec...');
+
+  const fd = new FormData();
+  fd.append('client_id',            client);
+  fd.append('month',                month);
+  fd.append('account_name',         acct || 'Cash');
+  fd.append('mode',                 mode);
+  fd.append('model',                model);
+  fd.append('bank_ending_balance',  bankBal);
+  fd.append('gl_ending_balance',    glBal);
+  fd.append('bank_statement',       bankFile);
+  fd.append('gl_subledger',         glFile);
+
+  try {
+    const r = await fetch('/api/bank_rec', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { showError(d.error); btn.disabled = false; btn.textContent = 'RUN BANK REC'; return; }
+    _jobId = d.job_id;
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(poll, 1500);
+  } catch (e) {
+    showError('Network error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'RUN BANK REC';
   }
 }
 
@@ -506,21 +705,49 @@ async function poll() {
 // Completion
 // ---------------------------------------------------------------------------
 function onDone(j) {
-  resetBtn();
+  // Reset buttons
+  const rb = document.getElementById('btn-run');
+  rb.disabled = false; rb.textContent = 'RUN CLOSE';
+  const bb = document.getElementById('btn-rec');
+  bb.disabled = false; bb.textContent = 'RUN BANK REC';
+
   const ok = j.status === 'complete';
   document.getElementById('status-hdr').textContent = ok ? 'Complete' : 'Failed';
   setProgress(100, ok ? 'Done' : 'Failed');
 
-  document.getElementById('s-accounts').textContent = j.accounts ?? '--';
-  document.getElementById('s-flagged').textContent  = j.flagged  ?? '--';
-  document.getElementById('s-cost').textContent     = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
-  document.getElementById('s-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  // Show the right stats panel
+  const isRec = j.job_type === 'bank_rec';
+  document.getElementById('stats-close').style.display = isRec ? 'none' : 'flex';
+  document.getElementById('stats-rec').style.display   = isRec ? 'flex' : 'none';
+
+  if (isRec) {
+    document.getElementById('r-matched').textContent    = j.matched    ?? '--';
+    document.getElementById('r-exceptions').textContent = j.exceptions ?? '--';
+    document.getElementById('r-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
+    document.getElementById('r-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  } else {
+    document.getElementById('s-accounts').textContent = j.accounts ?? '--';
+    document.getElementById('s-flagged').textContent  = j.flagged  ?? '--';
+    document.getElementById('s-cost').textContent     = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
+    document.getElementById('s-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  }
 
   const alertBox = document.getElementById('alerts');
   alertBox.innerHTML = '';
+
+  if (isRec && ok) {
+    const rec  = j.is_reconciled;
+    const diff = Number(j.difference || 0).toFixed(2);
+    const cls  = rec ? 'alert-ok' : 'alert-warn';
+    const msg  = rec
+      ? 'Reconciled -- Difference: $0.00'
+      : `Not yet reconciled -- Difference: $${diff}`;
+    alertBox.innerHTML = `<div class="alert ${cls}">${msg}</div>`;
+  }
+
   if (j.errors && j.errors.length) {
     j.errors.forEach(e => alertBox.innerHTML += `<div class="alert alert-warn">${esc(e)}</div>`);
-  } else if (ok) {
+  } else if (!isRec && ok) {
     alertBox.innerHTML = '<div class="alert alert-ok">All outputs generated successfully.</div>';
   }
 
@@ -546,7 +773,7 @@ function onDone(j) {
 // ---------------------------------------------------------------------------
 async function loadHistory() {
   try {
-    const r = await fetch('/api/history');
+    const r    = await fetch('/api/history');
     const rows = await r.json();
     const tbody = document.getElementById('hist-body');
 
@@ -556,15 +783,15 @@ async function loadHistory() {
     }
 
     tbody.innerHTML = rows.map(r => {
-      const s     = r.status || 'unknown';
-      const cls   = s === 'success' ? 'ok' : s === 'partial' ? 'warn' : 'fail';
-      const lbl   = s === 'success' ? 'OK' : s === 'partial' ? 'WARN' : 'FAIL';
-      const cost  = r.cost_usd > 0 ? `$${Number(r.cost_usd).toFixed(4)}` : '--';
-      const mode  = (r.mode || '?')[0] === 'f' ? 'Full' : 'Quick';
+      const s   = r.status || 'unknown';
+      const cls = s === 'success' ? 'ok' : s === 'partial' ? 'warn' : 'fail';
+      const lbl = s === 'success' ? 'OK' : s === 'partial' ? 'WARN' : 'FAIL';
+      const cost = r.cost_usd > 0 ? `$${Number(r.cost_usd).toFixed(4)}` : '--';
+      const mode = (r.mode || '?')[0] === 'f' ? 'Full' : 'Quick';
       return `<tr>
         <td>${fmtTs(r.finished)}</td>
-        <td>${esc(r.client_id  || '--')}</td>
-        <td>${esc(r.period     || '--')}</td>
+        <td>${esc(r.client_id || '--')}</td>
+        <td>${esc(r.period    || '--')}</td>
         <td>${mode}</td>
         <td><span class="badge ${cls}">${lbl}</span></td>
         <td style="text-align:right">${r.accounts ?? '--'}</td>
@@ -582,19 +809,22 @@ async function loadHistory() {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+function resetPanel(title) {
+  document.getElementById('status-card').style.display = 'block';
+  document.getElementById('status-hdr').textContent    = title;
+  document.getElementById('results').style.display     = 'none';
+  document.getElementById('alerts').innerHTML          = '';
+  setProgress(3, 'Uploading files...');
+}
 function setProgress(pct, step) {
-  document.getElementById('prog-fill').style.width = pct + '%';
-  document.getElementById('prog-step').textContent = step;
+  document.getElementById('prog-fill').style.width    = pct + '%';
+  document.getElementById('prog-step').textContent    = step;
 }
 function showError(msg) {
   document.getElementById('status-hdr').textContent = 'Error';
+  document.getElementById('status-card').style.display = 'block';
   document.getElementById('alerts').innerHTML = `<div class="alert alert-err">${esc(msg)}</div>`;
   document.getElementById('results').style.display = 'block';
-}
-function resetBtn() {
-  const btn = document.getElementById('btn-run');
-  btn.disabled = false;
-  btn.textContent = 'RUN CLOSE';
 }
 function fmtTs(iso) {
   if (!iso) return '--';
