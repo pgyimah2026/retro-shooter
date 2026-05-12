@@ -2,14 +2,14 @@
   "client_id":   "abc_corporation",
   "client_name": "ABC Corporation",
   "preparer":    "Michael Chen, CPA",
-  "firm":        "Williams & Partners, LLP",
+  "firm":        "Patrick LLC",
 
   "fiscal_year_end":    "12-31",
   "variance_threshold": 5.0,
   "materiality_amount": 2500.0,
 
   "contact_info": {
-    "firm_name":            "Williams & Partners, LLP",
+    "firm_name":            "Patrick LLC",
     "preparer_name":        "Michael Chen, CPA",
     "preparer_email":       "mchen@williamspartners.com",
     "preparer_phone":       "(555) 234-5678",
