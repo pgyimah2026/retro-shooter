@@ -91,12 +91,65 @@ def main():
 
     print(f"Created:  {bank_path.name}")
     print(f"Created:  {gl_path.name}")
+
+    # ---- Payroll Checking - Wells Fargo ---------------------------------
+    payroll_bank = [
+        ("2026-04-08", "Payroll Transfer from Main",      22000.00),
+        ("2026-04-08", "Direct Deposit Payroll Run",     -22000.00),
+        ("2026-04-22", "Payroll Transfer from Main",      22000.00),
+        ("2026-04-22", "Direct Deposit Payroll Run",     -22000.00),
+        ("2026-04-30", "Payroll Transfer - April Final",   6300.00),
+    ]
+    pb_df = pd.DataFrame(payroll_bank, columns=["Date", "Description", "Amount"])
+    pb_df["Date"] = pd.to_datetime(pb_df["Date"])
+    pb_path = out_dir / "payroll_bank_statement_2026-04.xlsx"
+    pb_df.to_excel(str(pb_path), index=False)
+
+    payroll_gl = [
+        ("2026-04-08", "Payroll Funding Transfer",     "TRF001",       0,  22000.00),
+        ("2026-04-08", "Payroll Direct Deposit Run 1", "PAY-DD-01", 22000.00,     0),
+        ("2026-04-22", "Payroll Funding Transfer",     "TRF002",       0,  22000.00),
+        ("2026-04-22", "Payroll Direct Deposit Run 2", "PAY-DD-02", 22000.00,     0),
+        ("2026-04-30", "Payroll Funding Transfer",     "TRF003",       0,   6300.00),
+        ("2026-04-30", "Payroll Tax Check Outstanding","CHK-P101",  1200.00,     0),
+    ]
+    pg_df = pd.DataFrame(payroll_gl, columns=["Date", "Description", "Reference", "Debit", "Credit"])
+    pg_df["Date"] = pd.to_datetime(pg_df["Date"])
+    pg_path = out_dir / "payroll_gl_subledger_2026-04.xlsx"
+    pg_df.to_excel(str(pg_path), index=False)
+
+    print(f"Created:  {pb_path.name}")
+    print(f"Created:  {pg_path.name}")
+
+    # ---- Money Market - Chase ------------------------------------------
+    mm_bank = [
+        ("2026-04-01", "Opening Balance",         50000.00),
+        ("2026-04-18", "Interest Earned",             62.50),
+        ("2026-04-18", "Monthly Service Fee",         -8.75),  # bank only (not booked)
+        ("2026-04-30", "Closing Balance Memo",         0.00),  # zero, ignored
+    ]
+    mb_df = pd.DataFrame(mm_bank, columns=["Date", "Description", "Amount"])
+    mb_df = mb_df[mb_df["Amount"] != 0]
+    mb_df["Date"] = pd.to_datetime(mb_df["Date"])
+    mb_path = out_dir / "moneymarket_bank_statement_2026-04.xlsx"
+    mb_df.to_excel(str(mb_path), index=False)
+
+    mm_gl = [
+        ("2026-04-01", "Opening Balance Transfer",  "DEP-MM-01",      0, 50000.00),
+        ("2026-04-18", "Interest Income Accrual",   "JE-INT-04",      0,    62.50),
+    ]
+    mg_df = pd.DataFrame(mm_gl, columns=["Date", "Description", "Reference", "Debit", "Credit"])
+    mg_df["Date"] = pd.to_datetime(mg_df["Date"])
+    mg_path = out_dir / "moneymarket_gl_subledger_2026-04.xlsx"
+    mg_df.to_excel(str(mg_path), index=False)
+
+    print(f"Created:  {mb_path.name}")
+    print(f"Created:  {mg_path.name}")
+
     print()
-    print("Expected reconciliation:")
-    print("  Bank ending balance:   $86,628.50")
-    print("  GL ending balance:     $92,861.00")
-    print("  Adjusted both to:      $92,928.50")
-    print("  Difference:                 $0.00  (reconciled)")
+    print("Main Checking rec:     Bank $86,628.50  |  GL $92,861.00  --> Adj $92,928.50  (reconciled)")
+    print("Payroll Checking rec:  Bank  $6,300.00  |  GL  $7,500.00  --> Adj  $6,300.00  (reconciled)")
+    print("Money Market rec:      Bank $50,053.75  |  GL $50,062.50  --> Adj $50,053.75  (reconciled)")
 
 
 if __name__ == "__main__":

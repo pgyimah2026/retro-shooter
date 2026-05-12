@@ -673,6 +673,124 @@ def _write_ai_sheet(ws, commentary: list):
 
 
 # ---------------------------------------------------------------------------
+# Multi-account export
+# ---------------------------------------------------------------------------
+
+def export_multi_reconciliation(
+    accounts: list[dict],
+    output_path,
+    period_label: str = "",
+    client_name: str = "",
+) -> Path:
+    """Export a multi-account reconciliation workbook.
+
+    Args:
+        accounts: list of dicts, each with keys:
+            "name"       -- account name (str)
+            "result"     -- return value from reconcile()
+            "commentary" -- list from generate_bank_rec_commentary() or []
+        output_path: where to save the workbook
+        period_label, client_name: metadata for title rows
+
+    Sheets:
+        1. All Accounts Summary  -- one row per account with status
+        2-N. Per-account sheets  -- individual reconciliation detail
+    """
+    output_path = Path(output_path)
+    wb = Workbook()
+
+    _write_multi_summary(wb.active, accounts, period_label, client_name)
+    wb.active.title = "All Accounts Summary"
+
+    for acct in accounts:
+        sheet_name = acct["name"][:31]  # Excel tab limit
+        ws = wb.create_sheet(sheet_name)
+        _write_summary(ws, acct["result"], period_label, acct["name"])
+        if acct.get("commentary"):
+            exc_ws = wb.create_sheet(f"{sheet_name[:27]} - AI")
+            _write_ai_sheet(exc_ws, acct["commentary"])
+
+    wb.save(str(output_path))
+    return output_path
+
+
+def _write_multi_summary(ws, accounts: list[dict], period_label: str, client_name: str):
+    ws.merge_cells("A1:H1")
+    t = ws["A1"]
+    t.value = "Multi-Account Bank Reconciliation"
+    t.font  = Font(name="Calibri", bold=True, size=14, color="FFFFFF")
+    t.fill  = _hfill(_NAVY)
+    t.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 26
+
+    sub = f"{client_name}  |  {period_label}" if (client_name or period_label) else ""
+    ws.merge_cells("A2:H2")
+    sc = ws["A2"]
+    sc.value = sub
+    sc.font  = Font(name="Calibri", size=11, color="FFFFFF", italic=True)
+    sc.fill  = _hfill(_NAVY)
+    sc.alignment = Alignment(horizontal="center")
+
+    hdrs = ["Account", "Bank Ending", "GL Ending", "Difference", "Status",
+            "Matched", "Exceptions", "AI Analysis"]
+    for c, h in enumerate(hdrs, 1):
+        cell = ws.cell(row=4, column=c, value=h)
+        cell.font   = Font(name="Calibri", bold=True, color="FFFFFF")
+        cell.fill   = _hfill(_NAVY)
+        cell.border = _border()
+        cell.alignment = Alignment(horizontal="center" if c > 1 else "left")
+
+    rec_count = 0
+    for r, acct in enumerate(accounts, start=5):
+        s      = acct["result"]["summary"]
+        is_rec = acct["result"]["is_reconciled"]
+        diff   = acct["result"]["difference"]
+        bg     = _GRN_BG if is_rec else _RED_BG
+        status = "Reconciled" if is_rec else "Not Reconciled"
+        if is_rec:
+            rec_count += 1
+
+        vals = [
+            acct["name"],
+            s["bank_ending_balance"],
+            s["gl_ending_balance"],
+            diff,
+            status,
+            s["matched_count"],
+            s["bank_only_count"] + s["gl_only_count"],
+            "Yes" if acct.get("commentary") else "No",
+        ]
+        for c, val in enumerate(vals, 1):
+            cell = ws.cell(row=r, column=c, value=val)
+            cell.font   = Font(name="Calibri", size=10, bold=(c == 5))
+            cell.fill   = _hfill(bg)
+            cell.border = _border()
+            if c in (2, 3, 4):
+                _fmt_money(cell)
+            if c in (6, 7):
+                cell.alignment = Alignment(horizontal="center")
+            if c == 5:
+                cell.alignment = Alignment(horizontal="center")
+            if c == 8:
+                cell.alignment = Alignment(horizontal="center")
+
+    # Footer summary
+    total_row = 5 + len(accounts)
+    ws.merge_cells(f"A{total_row}:D{total_row}")
+    summary_cell = ws.cell(
+        row=total_row, column=1,
+        value=f"{rec_count} of {len(accounts)} accounts reconciled"
+    )
+    summary_cell.font = Font(name="Calibri", bold=True, size=11, color=_NAVY)
+    summary_cell.fill = _hfill(_BLU_LT)
+    summary_cell.border = _border()
+
+    ws.column_dimensions["A"].width = 28
+    for c, w in enumerate([16, 16, 14, 16, 10, 12, 14], 2):
+        ws.column_dimensions[get_column_letter(c)].width = w
+
+
+# ---------------------------------------------------------------------------
 # Stand-alone test
 # ---------------------------------------------------------------------------
 

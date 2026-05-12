@@ -354,6 +354,98 @@ def poll_and_retrieve(
         time.sleep(poll_interval)
 
 
+def generate_aging_commentary(
+    aging_result: dict,
+    model: str = _DEFAULT_MODEL,
+    api_key: Optional[str] = None,
+) -> list[dict]:
+    """Generate AI collection-risk analysis for flagged aging items.
+
+    Args:
+        aging_result: Return value from aging.analyze_aging().
+        model:        Anthropic model ID or short alias.
+        api_key:      Optional API key; falls back to ANTHROPIC_API_KEY env var.
+
+    Returns:
+        List of dicts with keys: name, risk, analysis, action.
+        Covers all flagged entities (61+ days overdue). Empty list if none.
+    """
+    flagged      = aging_result.get("flagged", pd.DataFrame())
+    entity_label = aging_result.get("entity_label", "Customer")
+    summary      = aging_result.get("summary", {})
+
+    if isinstance(flagged, pd.DataFrame) and flagged.empty:
+        log.info("No aging exceptions -- skipping AI commentary.")
+        return []
+
+    model  = _resolve_model(model)
+    client = _make_client(api_key)
+
+    items = []
+    for _, row in flagged.iterrows():
+        items.append({
+            "name":       str(row["Name"]),
+            "b61_90":     float(row.get("B61_90", 0)),
+            "b90_plus":   float(row.get("B90_Plus", 0)),
+            "overdue":    float(row.get("Overdue", 0)),
+            "total":      float(row.get("Total", 0)),
+            "risk":       str(row.get("Risk", "Elevated")),
+        })
+
+    ctx = json.dumps({
+        "report_type":   aging_result.get("report_type", "AR"),
+        "entity_label":  entity_label,
+        "total_balance": summary.get("total", 0),
+        "overdue_pct":   summary.get("overdue_pct", 0),
+        "flagged_items": items,
+    }, indent=2)
+
+    rt = aging_result.get("report_type", "AR")
+    collect_word = "collect" if rt == "AR" else "pay"
+    user_message = (
+        f"You are a CPA analyzing {'accounts receivable' if rt == 'AR' else 'accounts payable'} "
+        f"aging for collection risk. For each flagged {entity_label.lower()} below:\n"
+        f"  1. A 1-2 sentence analysis of the collection risk or urgency.\n"
+        f"  2. A specific recommended action (e.g., 'Send 90-day demand letter', "
+        f"'Place account on hold', 'Escalate to collections').\n\n"
+        f"Context:\n{ctx}\n\n"
+        "Return a JSON array where each element has:\n"
+        '  "index":    integer (1-based, matching flagged_items order)\n'
+        '  "analysis": string (1-2 sentences)\n'
+        '  "action":   string (specific recommended action)\n\n'
+        "Return ONLY the JSON array."
+    )
+
+    log.debug("Calling %s for aging commentary (%d flagged).", model, len(items))
+    raw_text = _call_api(client, model, user_message)
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        if not isinstance(parsed, list):
+            raise ValueError("Expected a JSON array.")
+    except (json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not parse aging commentary response: %s", exc)
+        parsed = []
+
+    by_index = {item.get("index"): item for item in parsed}
+    result   = []
+    for i, item in enumerate(items, start=1):
+        ai = by_index.get(i, {})
+        result.append({
+            "name":     item["name"],
+            "risk":     item["risk"],
+            "analysis": ai.get("analysis", "[No analysis returned.]"),
+            "action":   ai.get("action",   "[No action suggested.]"),
+        })
+
+    return result
+
+
 def generate_bank_rec_commentary(
     rec_result: dict,
     model: str = _DEFAULT_MODEL,

@@ -27,9 +27,12 @@ except ImportError:
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from bank_rec import export_reconciliation, load_bank_statement, load_gl_subledger, reconcile
+from aging import analyze_aging, export_aging_excel, load_aging_report
+from bank_rec import (export_multi_reconciliation, export_reconciliation,
+                      load_bank_statement, load_gl_subledger, reconcile)
 from close_automation import _load_single_period
-from commentary_generator import generate_bank_rec_commentary, generate_commentary
+from commentary_generator import (generate_aging_commentary, generate_bank_rec_commentary,
+                                  generate_commentary)
 from config_manager import list_clients, load_client_config
 from je_generator import create_je_template
 from report_generator import generate_report
@@ -237,6 +240,152 @@ def api_bank_rec_status(job_id):
     return jsonify(job)
 
 
+@app.route("/api/multi_bank_rec", methods=["POST"])
+def api_multi_bank_rec():
+    client_id = request.form.get("client_id", "").strip()
+    month     = request.form.get("month", "").strip()
+    mode      = request.form.get("mode", "quick").strip()
+    model_key = request.form.get("model", "sonnet").strip()
+    model_id  = _MODEL_ALIASES.get(model_key, model_key)
+
+    try:
+        n = int(request.form.get("num_accounts", "0"))
+    except ValueError:
+        return jsonify({"error": "num_accounts must be an integer."}), 400
+
+    if not all([client_id, month]) or n == 0:
+        return jsonify({"error": "Missing required fields."}), 400
+
+    try:
+        config = load_client_config(client_id, config_dir=str(_HERE / "config"))
+    except Exception as exc:
+        return jsonify({"error": f"Config error: {exc}"}), 400
+
+    tmp_dir  = Path(tempfile.mkdtemp())
+    accounts = []
+    for i in range(n):
+        name     = request.form.get(f"name_{i}", f"Account {i+1}").strip()
+        bank_bal = request.form.get(f"bank_bal_{i}", "0").replace(",", "")
+        gl_bal   = request.form.get(f"gl_bal_{i}", "0").replace(",", "")
+        bf       = request.files.get(f"bank_file_{i}")
+        gf       = request.files.get(f"gl_file_{i}")
+
+        if not bf or not gf:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            return jsonify({"error": f"Missing files for account {i+1}."}), 400
+
+        bp = tmp_dir / f"bank_{i}_{bf.filename or 'bank.xlsx'}"
+        gp = tmp_dir / f"gl_{i}_{gf.filename or 'gl.xlsx'}"
+        bf.save(str(bp)); gf.save(str(gp))
+
+        try:
+            accounts.append({
+                "name":     name,
+                "bank_bal": float(bank_bal),
+                "gl_bal":   float(gl_bal),
+                "bank_path": bp,
+                "gl_path":   gp,
+            })
+        except ValueError:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            return jsonify({"error": f"Invalid balance for account {i+1}."}), 400
+
+    output_dir = _HERE / "output" / client_id / month
+    job_id     = str(uuid.uuid4())[:8]
+
+    with _lock:
+        _jobs[job_id] = {
+            "job_id":        job_id,
+            "job_type":      "multi_bank_rec",
+            "client_id":     client_id,
+            "client_name":   config.get("client_name", client_id),
+            "month":         month,
+            "mode":          mode,
+            "model":         model_id,
+            "status":        "running",
+            "step":          "Starting",
+            "progress":      0,
+            "outputs":       {},
+            "errors":        [],
+            "output_dir":    str(output_dir),
+            "started":       datetime.now().isoformat(),
+            "accounts_total": n,
+            "accounts_reconciled": 0,
+            "total_exceptions": 0,
+            "cost_usd":      0.0,
+            "elapsed_s":     0.0,
+        }
+
+    threading.Thread(
+        target=_multi_bank_rec_worker,
+        args=(job_id, client_id, month, mode, model_id,
+              accounts, output_dir, config, tmp_dir),
+        daemon=True,
+    ).start()
+
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/aging", methods=["POST"])
+def api_aging():
+    client_id   = request.form.get("client_id", "").strip()
+    month       = request.form.get("month", "").strip()
+    report_type = request.form.get("report_type", "AR").strip().upper()
+    mode        = request.form.get("mode", "quick").strip()
+    model_key   = request.form.get("model", "sonnet").strip()
+    model_id    = _MODEL_ALIASES.get(model_key, model_key)
+    aging_file  = request.files.get("aging_file")
+
+    if not all([client_id, month, aging_file]):
+        return jsonify({"error": "Missing required fields."}), 400
+
+    try:
+        config = load_client_config(client_id, config_dir=str(_HERE / "config"))
+    except Exception as exc:
+        return jsonify({"error": f"Config error: {exc}"}), 400
+
+    tmp_dir    = Path(tempfile.mkdtemp())
+    aging_path = tmp_dir / (aging_file.filename or "aging.xlsx")
+    aging_file.save(str(aging_path))
+
+    output_dir = _HERE / "output" / client_id / month
+    job_id     = str(uuid.uuid4())[:8]
+
+    with _lock:
+        _jobs[job_id] = {
+            "job_id":        job_id,
+            "job_type":      "aging",
+            "client_id":     client_id,
+            "client_name":   config.get("client_name", client_id),
+            "month":         month,
+            "report_type":   report_type,
+            "mode":          mode,
+            "model":         model_id,
+            "status":        "running",
+            "step":          "Starting",
+            "progress":      0,
+            "outputs":       {},
+            "errors":        [],
+            "output_dir":    str(output_dir),
+            "started":       datetime.now().isoformat(),
+            "entity_count":  0,
+            "flagged_count": 0,
+            "total_ar_ap":   0.0,
+            "overdue_pct":   0.0,
+            "cost_usd":      0.0,
+            "elapsed_s":     0.0,
+        }
+
+    threading.Thread(
+        target=_aging_worker,
+        args=(job_id, client_id, month, report_type, mode, model_id,
+              aging_path, output_dir, config, tmp_dir),
+        daemon=True,
+    ).start()
+
+    return jsonify({"job_id": job_id})
+
+
 @app.route("/api/history")
 def api_history():
     log_file = _HERE / "logs" / "close_runs.log"
@@ -370,6 +519,197 @@ def _worker(job_id, client_id, month, mode, model_id,
             })
         rl.finish(rid, "failed", [], errors + [str(exc)], elapsed_s=elapsed)
 
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Multi-account bank rec worker
+# ---------------------------------------------------------------------------
+
+def _multi_bank_rec_worker(
+    job_id, client_id, month, mode, model_id,
+    accounts, output_dir, config, tmp_dir,
+):
+    start    = time.monotonic()
+    errors   = []
+    est_cost = 0.0
+    results  = []
+
+    def _step(label, pct):
+        with _lock:
+            _jobs[job_id].update({"step": label, "progress": pct})
+
+    try:
+        total = len(accounts)
+        for i, acct in enumerate(accounts):
+            pct = int(10 + (i / total) * 70)
+            _step(f"Reconciling {acct['name']} ({i+1}/{total})", pct)
+
+            try:
+                bank_df = load_bank_statement(acct["bank_path"])
+                gl_df   = load_gl_subledger(acct["gl_path"])
+                result  = reconcile(bank_df, gl_df, acct["bank_bal"], acct["gl_bal"])
+            except Exception as exc:
+                errors.append(f"{acct['name']}: {exc}")
+                results.append({"name": acct["name"], "result": None, "commentary": []})
+                continue
+
+            commentary = []
+            if mode == "full" and os.getenv("ANTHROPIC_API_KEY"):
+                n_exc = result["summary"]["bank_only_count"] + result["summary"]["gl_only_count"]
+                if n_exc > 0:
+                    try:
+                        commentary = generate_bank_rec_commentary(result, model=model_id)
+                        pricing    = _PRICING.get(model_id, _PRICING["claude-sonnet-4-6"])
+                        est_cost  += (
+                            (100 + 80 * n_exc) / 1_000_000 * pricing["input"] +
+                            (150 * n_exc)      / 1_000_000 * pricing["output"]
+                        )
+                    except Exception as exc:
+                        errors.append(f"AI commentary failed for {acct['name']}: {exc}")
+
+            results.append({"name": acct["name"], "result": result, "commentary": commentary})
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        _step("Exporting workbook", 85)
+        year_n, mon_n = map(int, month.split("-"))
+        period_label  = datetime(year_n, mon_n, 1).strftime("%B %Y")
+        out_path      = output_dir / f"multi_bank_rec_{client_id}_{month}.xlsx"
+
+        valid = [r for r in results if r["result"] is not None]
+        export_multi_reconciliation(
+            valid, out_path,
+            period_label=period_label,
+            client_name=config.get("client_name", client_id),
+        )
+
+        rec_count    = sum(1 for r in valid if r["result"]["is_reconciled"])
+        total_exc    = sum(
+            r["result"]["summary"]["bank_only_count"] + r["result"]["summary"]["gl_only_count"]
+            for r in valid
+        )
+        elapsed = round(time.monotonic() - start, 1)
+        status  = "success" if not errors else "partial"
+
+        with _lock:
+            _jobs[job_id].update({
+                "status":              "complete",
+                "run_status":          status,
+                "step":                "Done",
+                "progress":            100,
+                "outputs":             {"Multi-Account Rec Workbook": out_path.name},
+                "errors":              errors,
+                "elapsed_s":           elapsed,
+                "accounts_reconciled": rec_count,
+                "total_exceptions":    total_exc,
+                "cost_usd":            round(est_cost, 4),
+            })
+
+    except Exception as exc:
+        elapsed = round(time.monotonic() - start, 1)
+        with _lock:
+            _jobs[job_id].update({
+                "status":    "error",
+                "run_status": "failed",
+                "step":      "Failed",
+                "progress":  100,
+                "errors":    errors + [str(exc)],
+                "elapsed_s": elapsed,
+            })
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Aging worker
+# ---------------------------------------------------------------------------
+
+def _aging_worker(
+    job_id, client_id, month, report_type, mode, model_id,
+    aging_path, output_dir, config, tmp_dir,
+):
+    start    = time.monotonic()
+    errors   = []
+    est_cost = 0.0
+
+    def _step(label, pct):
+        with _lock:
+            _jobs[job_id].update({"step": label, "progress": pct})
+
+    try:
+        _step("Loading aging report", 20)
+        df = load_aging_report(aging_path, report_type=report_type)
+
+        _step("Analyzing aging buckets", 45)
+        result = analyze_aging(df, report_type=report_type)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        commentary = []
+        if mode == "full":
+            _step("Generating AI analysis", 65)
+            if os.getenv("ANTHROPIC_API_KEY"):
+                n_flag = result["summary"]["flagged_count"]
+                if n_flag > 0:
+                    try:
+                        commentary = generate_aging_commentary(result, model=model_id)
+                        pricing    = _PRICING.get(model_id, _PRICING["claude-sonnet-4-6"])
+                        est_cost   = (
+                            (120 + 100 * n_flag) / 1_000_000 * pricing["input"] +
+                            (200 * n_flag)       / 1_000_000 * pricing["output"]
+                        )
+                    except Exception as exc:
+                        errors.append(f"AI analysis failed: {exc}")
+                else:
+                    errors.append("No flagged items -- AI analysis skipped")
+            else:
+                errors.append("ANTHROPIC_API_KEY not set -- AI analysis skipped")
+
+        _step("Exporting aging workbook", 85)
+        year_n, mon_n = map(int, month.split("-"))
+        period_label  = datetime(year_n, mon_n, 1).strftime("%B %Y")
+        prefix        = report_type.lower()
+        out_path      = output_dir / f"{prefix}_aging_{client_id}_{month}.xlsx"
+        export_aging_excel(
+            result, out_path,
+            commentary=commentary or None,
+            period_label=period_label,
+            client_name=config.get("client_name", client_id),
+        )
+
+        s       = result["summary"]
+        elapsed = round(time.monotonic() - start, 1)
+        status  = "success" if not errors else "partial"
+
+        with _lock:
+            _jobs[job_id].update({
+                "status":        "complete",
+                "run_status":    status,
+                "step":          "Done",
+                "progress":      100,
+                "outputs":       {f"{report_type} Aging Workbook": out_path.name},
+                "errors":        errors,
+                "elapsed_s":     elapsed,
+                "entity_count":  s["entity_count"],
+                "flagged_count": s["flagged_count"],
+                "total_ar_ap":   s["total"],
+                "overdue_pct":   s["overdue_pct"],
+                "cost_usd":      round(est_cost, 4),
+            })
+
+    except Exception as exc:
+        elapsed = round(time.monotonic() - start, 1)
+        with _lock:
+            _jobs[job_id].update({
+                "status":    "error",
+                "run_status": "failed",
+                "step":      "Failed",
+                "progress":  100,
+                "errors":    errors + [str(exc)],
+                "elapsed_s": elapsed,
+            })
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 

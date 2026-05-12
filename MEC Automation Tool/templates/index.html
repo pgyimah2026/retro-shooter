@@ -297,8 +297,9 @@
   <!-- ── Left panel: tabs ───────────────────────────────────── -->
   <div>
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('close', this)">Month-End Close</button>
+      <button class="tab-btn active" onclick="switchTab('close',   this)">Month-End Close</button>
       <button class="tab-btn"        onclick="switchTab('bankrec', this)">Bank Rec</button>
+      <button class="tab-btn"        onclick="switchTab('aging',   this)">AR/AP Aging</button>
     </div>
 
     <!-- Tab 1: Run Close -->
@@ -362,36 +363,19 @@
       </div>
     </div>
 
-    <!-- Tab 2: Bank Rec -->
+    <!-- Tab 2: Multi-Account Bank Rec -->
     <div class="card tab-pane" id="tab-bankrec" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
-      <div class="card-hdr">Bank Reconciliation</div>
+      <div class="card-hdr">Bank Reconciliation &mdash; All Accounts</div>
       <div class="card-body">
 
-        <div class="field">
-          <label class="lbl">Client</label>
-          <select id="br-client">
-            <option value="">Loading...</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label class="lbl">Period</label>
-          <input type="month" id="br-month">
-        </div>
-
-        <div class="field">
-          <label class="lbl">Bank Account Name</label>
-          <input type="text" id="br-account" placeholder="e.g. Main Checking - Chase">
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="field">
-          <div>
-            <label class="lbl">Bank Statement Ending Balance</label>
-            <input type="text" id="br-bank-bal" placeholder="86628.50">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label class="lbl">Client</label>
+            <select id="br-client"><option value="">Loading...</option></select>
           </div>
-          <div>
-            <label class="lbl">GL Cash Account Ending Balance</label>
-            <input type="text" id="br-gl-bal" placeholder="92861.00">
+          <div class="field">
+            <label class="lbl">Period</label>
+            <input type="month" id="br-month">
           </div>
         </div>
 
@@ -405,7 +389,7 @@
           </div>
         </div>
 
-        <div class="field model-row" id="br-model-row">
+        <div class="field model-row show" id="br-model-row">
           <label class="lbl">AI Model</label>
           <select id="br-model">
             <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
@@ -415,29 +399,81 @@
         </div>
 
         <div class="field">
-          <label class="lbl">Bank Statement</label>
-          <div class="zone" id="zone-bank">
-            <input type="file" id="file-bank" accept=".xlsx,.xls,.csv">
-            <div class="zone-icon">🏦</div>
-            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
-            <div class="zone-name" id="name-bank"></div>
+          <label class="lbl">Bank Accounts</label>
+          <div id="acct-rows"></div>
+          <button type="button" onclick="addAcctRow()"
+            style="margin-top:8px;padding:6px 14px;background:var(--blue-lt);
+                   border:1px solid var(--navy);border-radius:4px;
+                   color:var(--navy);font-weight:700;font-size:12px;cursor:pointer;">
+            + Add Account
+          </button>
+        </div>
+
+        <button class="btn-run" id="btn-rec" onclick="submitRec()">RUN ALL ACCOUNTS</button>
+
+      </div>
+    </div>
+
+    <!-- Tab 3: AR/AP Aging -->
+    <div class="card tab-pane" id="tab-aging" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+      <div class="card-hdr">AR / AP Aging Analysis</div>
+      <div class="card-body">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label class="lbl">Client</label>
+            <select id="ag-client"><option value="">Loading...</option></select>
+          </div>
+          <div class="field">
+            <label class="lbl">Period</label>
+            <input type="month" id="ag-month">
           </div>
         </div>
 
         <div class="field">
-          <label class="lbl">GL Cash Subledger</label>
-          <div class="zone" id="zone-gl">
-            <input type="file" id="file-gl" accept=".xlsx,.xls,.csv">
-            <div class="zone-icon">📒</div>
-            <div class="zone-hint">Click or drag &amp; drop &mdash; .xlsx / .csv</div>
-            <div class="zone-name" id="name-gl"></div>
+          <label class="lbl">Report Type</label>
+          <div class="toggle">
+            <input type="radio" name="ag-type" id="ag-ar" value="AR" checked>
+            <label for="ag-ar">Accounts Receivable (AR)</label>
+            <input type="radio" name="ag-type" id="ag-ap" value="AP">
+            <label for="ag-ap">Accounts Payable (AP)</label>
           </div>
         </div>
 
-        <button class="btn-run" id="btn-rec" onclick="submitRec()">RUN BANK REC</button>
+        <div class="field">
+          <label class="lbl">Mode</label>
+          <div class="toggle">
+            <input type="radio" name="ag-mode" id="ag-full"  value="full" checked>
+            <label for="ag-full">Full &mdash; AI Risk Analysis</label>
+            <input type="radio" name="ag-mode" id="ag-quick" value="quick">
+            <label for="ag-quick">Quick &mdash; No AI</label>
+          </div>
+        </div>
+
+        <div class="field model-row show" id="ag-model-row">
+          <label class="lbl">AI Model</label>
+          <select id="ag-model">
+            <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
+            <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
+            <option value="opus">Opus 4.7 &mdash; Most Capable</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Aging Report File</label>
+          <div class="zone" id="zone-aging">
+            <input type="file" id="file-aging" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📊</div>
+            <div class="zone-hint">QuickBooks / NetSuite / Sage export &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-aging"></div>
+          </div>
+        </div>
+
+        <button class="btn-run" id="btn-aging" onclick="submitAging()">RUN AGING ANALYSIS</button>
 
       </div>
     </div>
+
   </div>
 
   <!-- ── Status / Results ───────────────────────────────────── -->
@@ -458,12 +494,26 @@
           <div class="stat"><div class="val" id="s-cost">--</div><div class="lbl">AI Cost</div></div>
           <div class="stat"><div class="val" id="s-time">--</div><div class="lbl">Elapsed</div></div>
         </div>
-        <!-- Bank rec stats -->
+        <!-- Bank rec stats (single) -->
         <div class="stats" id="stats-rec" style="display:none">
           <div class="stat"><div class="val" id="r-matched">--</div><div class="lbl">Matched</div></div>
           <div class="stat"><div class="val" id="r-exceptions">--</div><div class="lbl">Exceptions</div></div>
           <div class="stat"><div class="val" id="r-cost">--</div><div class="lbl">AI Cost</div></div>
           <div class="stat"><div class="val" id="r-time">--</div><div class="lbl">Elapsed</div></div>
+        </div>
+        <!-- Multi bank rec stats -->
+        <div class="stats" id="stats-multi-rec" style="display:none">
+          <div class="stat"><div class="val" id="mr-reconciled">--</div><div class="lbl">Reconciled</div></div>
+          <div class="stat"><div class="val" id="mr-exceptions">--</div><div class="lbl">Exceptions</div></div>
+          <div class="stat"><div class="val" id="mr-cost">--</div><div class="lbl">AI Cost</div></div>
+          <div class="stat"><div class="val" id="mr-time">--</div><div class="lbl">Elapsed</div></div>
+        </div>
+        <!-- Aging stats -->
+        <div class="stats" id="stats-aging" style="display:none">
+          <div class="stat"><div class="val" id="ag-entities">--</div><div class="lbl">Entities</div></div>
+          <div class="stat"><div class="val" id="ag-flagged">--</div><div class="lbl">High Risk</div></div>
+          <div class="stat"><div class="val" id="ag-overdue">--</div><div class="lbl">% Overdue</div></div>
+          <div class="stat"><div class="val" id="ag-time">--</div><div class="lbl">Elapsed</div></div>
         </div>
 
         <div id="alerts"></div>
@@ -538,13 +588,21 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('br-model-row').classList.toggle('show', r.value === 'full' && r.checked);
     })
   );
-  document.getElementById('br-model-row').classList.add('show');
+
+  // Aging mode toggle
+  document.querySelectorAll('input[name="ag-mode"]').forEach(r =>
+    r.addEventListener('change', () => {
+      document.getElementById('ag-model-row').classList.toggle('show', r.value === 'full' && r.checked);
+    })
+  );
 
   // File zones
-  wireZone('zone-cur',  'file-cur',  'name-cur');
-  wireZone('zone-pri',  'file-pri',  'name-pri');
-  wireZone('zone-bank', 'file-bank', 'name-bank');
-  wireZone('zone-gl',   'file-gl',   'name-gl');
+  wireZone('zone-cur',   'file-cur',   'name-cur');
+  wireZone('zone-pri',   'file-pri',   'name-pri');
+  wireZone('zone-aging', 'file-aging', 'name-aging');
+
+  // Add one account row by default
+  addAcctRow();
 });
 
 // ---------------------------------------------------------------------------
@@ -558,6 +616,67 @@ function switchTab(name, btn) {
 }
 
 // ---------------------------------------------------------------------------
+// Dynamic account rows (multi-account bank rec)
+// ---------------------------------------------------------------------------
+let _acctCount = 0;
+
+function addAcctRow() {
+  const i   = _acctCount++;
+  const row = document.createElement('div');
+  row.id    = `acct-row-${i}`;
+  row.style.cssText = 'border:1px solid var(--grey-md);border-radius:4px;padding:12px;margin-bottom:10px;position:relative;background:#fafafa;';
+  row.innerHTML = `
+    <button type="button" onclick="removeAcctRow(${i})"
+      style="position:absolute;top:8px;right:8px;background:var(--red);border:none;
+             border-radius:3px;color:var(--red-dk);font-weight:900;cursor:pointer;
+             width:22px;height:22px;font-size:13px;line-height:1;">&times;</button>
+    <div style="font-size:11px;font-weight:700;color:var(--grey-dk);text-transform:uppercase;
+                letter-spacing:.4px;margin-bottom:8px;">Account ${i + 1}</div>
+    <div class="field">
+      <label class="lbl">Account Name</label>
+      <input type="text" id="br-name-${i}" placeholder="e.g. Main Checking - Chase">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label class="lbl">Bank Ending Balance</label>
+        <input type="text" id="br-bank-${i}" placeholder="86628.50">
+      </div>
+      <div class="field">
+        <label class="lbl">GL Ending Balance</label>
+        <input type="text" id="br-gl-${i}" placeholder="92861.00">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="field">
+        <label class="lbl">Bank Statement</label>
+        <div class="zone" id="zone-bf-${i}" style="padding:10px 8px;">
+          <input type="file" id="file-bf-${i}" accept=".xlsx,.xls,.csv">
+          <div style="font-size:18px">🏦</div>
+          <div class="zone-hint">Bank statement</div>
+          <div class="zone-name" id="name-bf-${i}"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl">GL Subledger</label>
+        <div class="zone" id="zone-gf-${i}" style="padding:10px 8px;">
+          <input type="file" id="file-gf-${i}" accept=".xlsx,.xls,.csv">
+          <div style="font-size:18px">📒</div>
+          <div class="zone-hint">GL subledger</div>
+          <div class="zone-name" id="name-gf-${i}"></div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('acct-rows').appendChild(row);
+  wireZone(`zone-bf-${i}`, `file-bf-${i}`, `name-bf-${i}`);
+  wireZone(`zone-gf-${i}`, `file-gf-${i}`, `name-gf-${i}`);
+}
+
+function removeAcctRow(i) {
+  const el = document.getElementById(`acct-row-${i}`);
+  if (el) el.remove();
+}
+
+// ---------------------------------------------------------------------------
 // Clients
 // ---------------------------------------------------------------------------
 async function loadClients() {
@@ -567,12 +686,14 @@ async function loadClients() {
     const opts = list.length
       ? list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
       : '<option value="">No clients found</option>';
-    document.getElementById('sel-client').innerHTML = opts;
-    document.getElementById('br-client').innerHTML  = opts;
+    ['sel-client','br-client','ag-client'].forEach(id => {
+      document.getElementById(id).innerHTML = opts;
+    });
   } catch {
     const err = '<option value="">Error loading clients</option>';
-    document.getElementById('sel-client').innerHTML = err;
-    document.getElementById('br-client').innerHTML  = err;
+    ['sel-client','br-client','ag-client'].forEach(id => {
+      document.getElementById(id).innerHTML = err;
+    });
   }
 }
 
@@ -638,50 +759,102 @@ async function submitRun() {
 }
 
 // ---------------------------------------------------------------------------
-// Submit: Bank Rec
+// Submit: Multi-Account Bank Rec
 // ---------------------------------------------------------------------------
 async function submitRec() {
-  const client   = document.getElementById('br-client').value;
-  const month    = document.getElementById('br-month').value;
-  const acct     = document.getElementById('br-account').value.trim();
-  const mode     = document.querySelector('input[name="br-mode"]:checked').value;
-  const model    = document.getElementById('br-model').value;
-  const bankBal  = document.getElementById('br-bank-bal').value.trim();
-  const glBal    = document.getElementById('br-gl-bal').value.trim();
-  const bankFile = document.getElementById('file-bank').files[0];
-  const glFile   = document.getElementById('file-gl').files[0];
+  const client = document.getElementById('br-client').value;
+  const month  = document.getElementById('br-month').value;
+  const mode   = document.querySelector('input[name="br-mode"]:checked').value;
+  const model  = document.getElementById('br-model').value;
 
-  if (!client || !month)  { alert('Please select a client and period.'); return; }
-  if (!bankBal || !glBal) { alert('Please enter both ending balances.'); return; }
-  if (!bankFile)           { alert('Please upload the bank statement.'); return; }
-  if (!glFile)             { alert('Please upload the GL cash subledger.'); return; }
+  if (!client || !month) { alert('Please select a client and period.'); return; }
 
-  _jobType = 'bankrec';
-  const btn = document.getElementById('btn-rec');
-  btn.disabled = true; btn.textContent = 'RUNNING...';
-  resetPanel('Running Bank Rec...');
+  // Collect all account rows
+  const rows = document.querySelectorAll('#acct-rows > div[id^="acct-row-"]');
+  if (rows.length === 0) { alert('Please add at least one bank account.'); return; }
 
   const fd = new FormData();
-  fd.append('client_id',            client);
-  fd.append('month',                month);
-  fd.append('account_name',         acct || 'Cash');
-  fd.append('mode',                 mode);
-  fd.append('model',                model);
-  fd.append('bank_ending_balance',  bankBal);
-  fd.append('gl_ending_balance',    glBal);
-  fd.append('bank_statement',       bankFile);
-  fd.append('gl_subledger',         glFile);
+  fd.append('client_id', client);
+  fd.append('month',     month);
+  fd.append('mode',      mode);
+  fd.append('model',     model);
+
+  let valid = 0;
+  for (const row of rows) {
+    const idx = row.id.replace('acct-row-', '');
+    const name = document.getElementById(`br-name-${idx}`)?.value.trim() || `Account ${Number(idx)+1}`;
+    const bankBal = document.getElementById(`br-bank-${idx}`)?.value.trim();
+    const glBal   = document.getElementById(`br-gl-${idx}`)?.value.trim();
+    const bankFile = document.getElementById(`file-bf-${idx}`)?.files[0];
+    const glFile   = document.getElementById(`file-gf-${idx}`)?.files[0];
+
+    if (!bankBal || !glBal || !bankFile || !glFile) continue; // skip incomplete rows
+    fd.append(`name_${valid}`,      name);
+    fd.append(`bank_bal_${valid}`,  bankBal);
+    fd.append(`gl_bal_${valid}`,    glBal);
+    fd.append(`bank_file_${valid}`, bankFile);
+    fd.append(`gl_file_${valid}`,   glFile);
+    valid++;
+  }
+
+  if (valid === 0) { alert('Please complete at least one account row (name, balances, and both files).'); return; }
+  fd.append('num_accounts', valid);
+
+  _jobType = 'multi_bankrec';
+  const btn = document.getElementById('btn-rec');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  resetPanel(`Running Bank Rec (${valid} account${valid > 1 ? 's' : ''})...`);
 
   try {
-    const r = await fetch('/api/bank_rec', { method: 'POST', body: fd });
+    const r = await fetch('/api/multi_bank_rec', { method: 'POST', body: fd });
     const d = await r.json();
-    if (d.error) { showError(d.error); btn.disabled = false; btn.textContent = 'RUN BANK REC'; return; }
+    if (d.error) { showError(d.error); btn.disabled = false; btn.textContent = 'RUN ALL ACCOUNTS'; return; }
     _jobId = d.job_id;
     if (_timer) clearInterval(_timer);
     _timer = setInterval(poll, 1500);
   } catch (e) {
     showError('Network error: ' + e.message);
-    btn.disabled = false; btn.textContent = 'RUN BANK REC';
+    btn.disabled = false; btn.textContent = 'RUN ALL ACCOUNTS';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Submit: Aging
+// ---------------------------------------------------------------------------
+async function submitAging() {
+  const client      = document.getElementById('ag-client').value;
+  const month       = document.getElementById('ag-month').value;
+  const report_type = document.querySelector('input[name="ag-type"]:checked').value;
+  const mode        = document.querySelector('input[name="ag-mode"]:checked').value;
+  const model       = document.getElementById('ag-model').value;
+  const agingFile   = document.getElementById('file-aging').files[0];
+
+  if (!client || !month) { alert('Please select a client and period.'); return; }
+  if (!agingFile)         { alert('Please upload the aging report file.'); return; }
+
+  _jobType = 'aging';
+  const btn = document.getElementById('btn-aging');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  resetPanel(`Running ${report_type} Aging Analysis...`);
+
+  const fd = new FormData();
+  fd.append('client_id',   client);
+  fd.append('month',       month);
+  fd.append('report_type', report_type);
+  fd.append('mode',        mode);
+  fd.append('model',       model);
+  fd.append('aging_file',  agingFile);
+
+  try {
+    const r = await fetch('/api/aging', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { showError(d.error); btn.disabled = false; btn.textContent = 'RUN AGING ANALYSIS'; return; }
+    _jobId = d.job_id;
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(poll, 1500);
+  } catch (e) {
+    showError('Network error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'RUN AGING ANALYSIS';
   }
 }
 
@@ -705,50 +878,80 @@ async function poll() {
 // Completion
 // ---------------------------------------------------------------------------
 function onDone(j) {
-  // Reset buttons
-  const rb = document.getElementById('btn-run');
-  rb.disabled = false; rb.textContent = 'RUN CLOSE';
-  const bb = document.getElementById('btn-rec');
-  bb.disabled = false; bb.textContent = 'RUN BANK REC';
+  // Reset all buttons
+  document.getElementById('btn-run').disabled   = false;
+  document.getElementById('btn-run').textContent = 'RUN CLOSE';
+  document.getElementById('btn-rec').disabled   = false;
+  document.getElementById('btn-rec').textContent = 'RUN ALL ACCOUNTS';
+  const ba = document.getElementById('btn-aging');
+  if (ba) { ba.disabled = false; ba.textContent = 'RUN AGING ANALYSIS'; }
 
   const ok = j.status === 'complete';
   document.getElementById('status-hdr').textContent = ok ? 'Complete' : 'Failed';
   setProgress(100, ok ? 'Done' : 'Failed');
 
-  // Show the right stats panel
-  const isRec = j.job_type === 'bank_rec';
-  document.getElementById('stats-close').style.display = isRec ? 'none' : 'flex';
-  document.getElementById('stats-rec').style.display   = isRec ? 'flex' : 'none';
+  // Hide all stats panels, show the right one
+  ['stats-close','stats-rec','stats-multi-rec','stats-aging'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
 
-  if (isRec) {
-    document.getElementById('r-matched').textContent    = j.matched    ?? '--';
-    document.getElementById('r-exceptions').textContent = j.exceptions ?? '--';
-    document.getElementById('r-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
-    document.getElementById('r-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
-  } else {
+  const jt = j.job_type || 'close';
+
+  if (jt === 'close') {
+    document.getElementById('stats-close').style.display = 'flex';
     document.getElementById('s-accounts').textContent = j.accounts ?? '--';
     document.getElementById('s-flagged').textContent  = j.flagged  ?? '--';
     document.getElementById('s-cost').textContent     = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
     document.getElementById('s-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  } else if (jt === 'bank_rec') {
+    document.getElementById('stats-rec').style.display = 'flex';
+    document.getElementById('r-matched').textContent    = j.matched    ?? '--';
+    document.getElementById('r-exceptions').textContent = j.exceptions ?? '--';
+    document.getElementById('r-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
+    document.getElementById('r-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  } else if (jt === 'multi_bank_rec') {
+    document.getElementById('stats-multi-rec').style.display = 'flex';
+    const total = j.accounts_total ?? '--';
+    const rec   = j.accounts_reconciled ?? '--';
+    document.getElementById('mr-reconciled').textContent = `${rec}/${total}`;
+    document.getElementById('mr-exceptions').textContent = j.total_exceptions ?? '--';
+    document.getElementById('mr-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
+    document.getElementById('mr-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  } else if (jt === 'aging') {
+    document.getElementById('stats-aging').style.display = 'flex';
+    document.getElementById('ag-entities').textContent = j.entity_count  ?? '--';
+    document.getElementById('ag-flagged').textContent  = j.flagged_count ?? '--';
+    document.getElementById('ag-overdue').textContent  = j.overdue_pct != null ? `${j.overdue_pct}%` : '--';
+    document.getElementById('ag-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   }
 
   const alertBox = document.getElementById('alerts');
   alertBox.innerHTML = '';
 
-  if (isRec && ok) {
-    const rec  = j.is_reconciled;
+  if (jt === 'bank_rec' && ok) {
+    const rec = j.is_reconciled;
     const diff = Number(j.difference || 0).toFixed(2);
-    const cls  = rec ? 'alert-ok' : 'alert-warn';
-    const msg  = rec
-      ? 'Reconciled -- Difference: $0.00'
-      : `Not yet reconciled -- Difference: $${diff}`;
-    alertBox.innerHTML = `<div class="alert ${cls}">${msg}</div>`;
+    alertBox.innerHTML = `<div class="alert ${rec ? 'alert-ok' : 'alert-warn'}">
+      ${rec ? 'Reconciled -- Difference: $0.00' : `Not reconciled -- Difference: $${diff}`}
+    </div>`;
+  } else if (jt === 'multi_bank_rec' && ok) {
+    const r = j.accounts_reconciled ?? 0;
+    const t = j.accounts_total ?? 0;
+    alertBox.innerHTML = `<div class="alert ${r === t ? 'alert-ok' : 'alert-warn'}">
+      ${r} of ${t} accounts reconciled
+    </div>`;
+  } else if (jt === 'aging' && ok) {
+    const pct = j.overdue_pct ?? 0;
+    const cls = pct > 30 ? 'alert-warn' : 'alert-ok';
+    alertBox.innerHTML = `<div class="alert ${cls}">
+      ${j.entity_count} entities &mdash; ${pct}% overdue &mdash; ${j.flagged_count} flagged (61+ days)
+    </div>`;
+  } else if (ok) {
+    alertBox.innerHTML = '<div class="alert alert-ok">All outputs generated successfully.</div>';
   }
 
   if (j.errors && j.errors.length) {
     j.errors.forEach(e => alertBox.innerHTML += `<div class="alert alert-warn">${esc(e)}</div>`);
-  } else if (!isRec && ok) {
-    alertBox.innerHTML = '<div class="alert alert-ok">All outputs generated successfully.</div>';
   }
 
   const dlBox = document.getElementById('dl-links');
