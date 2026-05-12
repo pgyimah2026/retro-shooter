@@ -543,6 +543,117 @@ def generate_bank_rec_commentary(
     return result
 
 
+def generate_flux_commentary(
+    flux_result: dict,
+    model: str = _DEFAULT_MODEL,
+    api_key: Optional[str] = None,
+) -> list[dict]:
+    """Generate AI explanations for material flux items.
+
+    Args:
+        flux_result: Return value from flux_analysis.analyze_flux().
+        model:       Anthropic model ID or short alias ("haiku", "sonnet", "opus").
+        api_key:     Optional API key; falls back to ANTHROPIC_API_KEY env var.
+
+    Returns:
+        List of dicts with keys: account_number, account_name, mom_pct,
+        (yoy_pct if has_yoy), analysis, action.
+        Empty list if there are no flagged items.
+    """
+    flagged = flux_result.get("flagged", pd.DataFrame())
+    has_yoy = flux_result.get("has_yoy", False)
+
+    if isinstance(flagged, pd.DataFrame) and flagged.empty:
+        log.info("No flagged flux items -- skipping AI commentary.")
+        return []
+
+    model  = _resolve_model(model)
+    client = _make_client(api_key)
+
+    items = []
+    for _, row in flagged.iterrows():
+        item = {
+            "account_number": str(row["Account_Number"]),
+            "account_name":   str(row["Account_Name"]),
+            "current":        float(row["Current"]),
+            "prior_month":    float(row["Prior_Month"]),
+            "mom_change":     float(row["MoM_Change"]),
+            "mom_pct":        float(row["MoM_Pct"]),
+            "mom_flagged":    bool(row.get("MoM_Flag", False)),
+        }
+        if has_yoy:
+            item.update({
+                "prior_year":  float(row.get("Prior_Year", 0)),
+                "yoy_change":  float(row.get("YoY_Change", 0)),
+                "yoy_pct":     float(row.get("YoY_Pct",   0)),
+                "yoy_flagged": bool(row.get("YoY_Flag",   False)),
+            })
+        items.append(item)
+
+    block = json.dumps(items, indent=2)
+    if has_yoy:
+        user_message = (
+            "You are a CPA analyzing month-over-month AND year-over-year account fluctuations "
+            "during a month-end close review. For each flagged account below:\n"
+            "  1. A 1-2 sentence analysis of the most likely business drivers.\n"
+            "  2. A specific recommended action for the accountant (e.g., 'Verify accrual "
+            "reversal was posted', 'Confirm revenue cutoff is correct', 'Review vendor "
+            "invoices for timing differences').\n\n"
+            f"Flagged accounts:\n{block}\n\n"
+            "Return a JSON array where each element has:\n"
+            '  "index":    integer (1-based, matching item order above)\n'
+            '  "analysis": string (1-2 sentences)\n'
+            '  "action":   string (specific recommended action)\n\n'
+            "Return ONLY the JSON array."
+        )
+    else:
+        user_message = (
+            "You are a CPA analyzing month-over-month account fluctuations during a "
+            "month-end close review. For each flagged account below:\n"
+            "  1. A 1-2 sentence analysis of the most likely business drivers.\n"
+            "  2. A specific recommended action for the accountant.\n\n"
+            f"Flagged accounts:\n{block}\n\n"
+            "Return a JSON array where each element has:\n"
+            '  "index":    integer (1-based, matching item order above)\n'
+            '  "analysis": string (1-2 sentences)\n'
+            '  "action":   string (specific recommended action)\n\n'
+            "Return ONLY the JSON array."
+        )
+
+    log.debug("Calling %s for flux commentary (%d flagged).", model, len(items))
+    raw_text = _call_api(client, model, user_message)
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        if not isinstance(parsed, list):
+            raise ValueError("Expected a JSON array.")
+    except (json.JSONDecodeError, ValueError) as exc:
+        log.warning("Could not parse flux commentary response: %s", exc)
+        parsed = []
+
+    by_index = {entry.get("index"): entry for entry in parsed}
+    result   = []
+    for i, item in enumerate(items, start=1):
+        ai    = by_index.get(i, {})
+        entry = {
+            "account_number": item["account_number"],
+            "account_name":   item["account_name"],
+            "mom_pct":        item["mom_pct"],
+            "analysis":       ai.get("analysis", "[No analysis returned.]"),
+            "action":         ai.get("action",   "[No action suggested.]"),
+        }
+        if has_yoy:
+            entry["yoy_pct"] = item.get("yoy_pct", 0)
+        result.append(entry)
+
+    return result
+
+
 def load_batch_job(json_path: str) -> dict:
     """Load batch metadata previously saved by generate_commentary (batch mode).
 

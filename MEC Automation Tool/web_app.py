@@ -32,7 +32,8 @@ from bank_rec import (export_multi_reconciliation, export_reconciliation,
                       load_bank_statement, load_gl_subledger, reconcile)
 from close_automation import _load_single_period
 from commentary_generator import (generate_aging_commentary, generate_bank_rec_commentary,
-                                  generate_commentary)
+                                  generate_commentary, generate_flux_commentary)
+from flux_analysis import analyze_flux, export_flux_excel
 from config_manager import list_clients, load_client_config
 from je_generator import create_je_template
 from report_generator import generate_report
@@ -380,6 +381,73 @@ def api_aging():
         target=_aging_worker,
         args=(job_id, client_id, month, report_type, mode, model_id,
               aging_path, output_dir, config, tmp_dir),
+        daemon=True,
+    ).start()
+
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/flux", methods=["POST"])
+def api_flux():
+    client_id    = request.form.get("client_id", "").strip()
+    month        = request.form.get("month", "").strip()
+    mode         = request.form.get("mode", "quick").strip()
+    model_key    = request.form.get("model", "sonnet").strip()
+    model_id     = _MODEL_ALIASES.get(model_key, model_key)
+    current_file = request.files.get("current_tb")
+    prior_m_file = request.files.get("prior_month_tb")
+    prior_y_file = request.files.get("prior_year_tb")   # optional
+
+    if not all([client_id, month, current_file, prior_m_file]):
+        return jsonify({"error": "Missing required fields."}), 400
+
+    try:
+        config = load_client_config(client_id, config_dir=str(_HERE / "config"))
+    except Exception as exc:
+        return jsonify({"error": f"Config error: {exc}"}), 400
+
+    tmp_dir      = Path(tempfile.mkdtemp())
+    current_path = tmp_dir / (current_file.filename or "current.xlsx")
+    prior_m_path = tmp_dir / (prior_m_file.filename or "prior_month.xlsx")
+    current_file.save(str(current_path))
+    prior_m_file.save(str(prior_m_path))
+
+    prior_y_path = None
+    if prior_y_file and prior_y_file.filename:
+        prior_y_path = tmp_dir / prior_y_file.filename
+        prior_y_file.save(str(prior_y_path))
+
+    output_dir = _HERE / "output" / client_id / month
+    job_id     = str(uuid.uuid4())[:8]
+
+    with _lock:
+        _jobs[job_id] = {
+            "job_id":          job_id,
+            "job_type":        "flux",
+            "client_id":       client_id,
+            "client_name":     config.get("client_name", client_id),
+            "month":           month,
+            "mode":            mode,
+            "model":           model_id,
+            "has_yoy":         prior_y_path is not None,
+            "status":          "running",
+            "step":            "Starting",
+            "progress":        0,
+            "outputs":         {},
+            "errors":          [],
+            "output_dir":      str(output_dir),
+            "started":         datetime.now().isoformat(),
+            "total_accounts":  0,
+            "mom_flagged":     0,
+            "yoy_flagged":     0,
+            "cost_usd":        0.0,
+            "elapsed_s":       0.0,
+        }
+
+    threading.Thread(
+        target=_flux_worker,
+        args=(job_id, client_id, month, mode, model_id,
+              current_path, prior_m_path, prior_y_path, output_dir, config, tmp_dir),
         daemon=True,
     ).start()
 
@@ -805,6 +873,106 @@ def _bank_rec_worker(
                 "elapsed_s": elapsed,
             })
 
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Flux analysis worker
+# ---------------------------------------------------------------------------
+
+def _flux_worker(
+    job_id, client_id, month, mode, model_id,
+    current_path, prior_m_path, prior_y_path, output_dir, config, tmp_dir,
+):
+    start    = time.monotonic()
+    errors   = []
+    est_cost = 0.0
+
+    def _step(label, pct):
+        with _lock:
+            _jobs[job_id].update({"step": label, "progress": pct})
+
+    try:
+        _step("Loading trial balances", 15)
+        current_df = _load_single_period(current_path)
+        prior_m_df = _load_single_period(prior_m_path)
+        prior_y_df = _load_single_period(prior_y_path) if prior_y_path else None
+
+        _step("Calculating flux", 40)
+        threshold = config.get("variance_threshold", 5.0)
+        result    = analyze_flux(current_df, prior_m_df, prior_y_df, threshold_pct=threshold)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        commentary = []
+        if mode == "full":
+            _step("Generating AI commentary", 65)
+            n_flagged = result["summary"]["any_flagged"]
+            if n_flagged > 0:
+                if os.getenv("ANTHROPIC_API_KEY"):
+                    try:
+                        commentary = generate_flux_commentary(result, model=model_id)
+                        pricing    = _PRICING.get(model_id, _PRICING["claude-sonnet-4-6"])
+                        est_cost   = (
+                            (100 + 120 * n_flagged) / 1_000_000 * pricing["input"] +
+                            (180 * n_flagged)       / 1_000_000 * pricing["output"]
+                        )
+                    except Exception as exc:
+                        errors.append(f"AI commentary failed: {exc}")
+                else:
+                    errors.append("ANTHROPIC_API_KEY not set -- AI commentary skipped")
+
+        _step("Exporting flux workbook", 85)
+        year_n, mon_n = map(int, month.split("-"))
+        period_label  = datetime(year_n, mon_n, 1).strftime("%B %Y")
+        if mon_n == 1:
+            prior_mon_dt = datetime(year_n - 1, 12, 1)
+        else:
+            prior_mon_dt = datetime(year_n, mon_n - 1, 1)
+        prior_month_label = prior_mon_dt.strftime("%B %Y")
+        prior_year_label  = datetime(year_n - 1, mon_n, 1).strftime("%B %Y") if prior_y_path else ""
+
+        out_path = output_dir / f"flux_analysis_{client_id}_{month}.xlsx"
+        export_flux_excel(
+            result, out_path,
+            commentary=commentary or None,
+            period_label=period_label,
+            prior_month_label=prior_month_label,
+            prior_year_label=prior_year_label,
+            client_name=config.get("client_name", client_id),
+        )
+
+        s       = result["summary"]
+        elapsed = round(time.monotonic() - start, 1)
+        status  = "success" if not errors else "partial"
+
+        with _lock:
+            _jobs[job_id].update({
+                "status":         "complete",
+                "run_status":     status,
+                "step":           "Done",
+                "progress":       100,
+                "outputs":        {"Flux Analysis Workbook": out_path.name},
+                "errors":         errors,
+                "elapsed_s":      elapsed,
+                "total_accounts": s["total_accounts"],
+                "mom_flagged":    s["mom_flagged"],
+                "yoy_flagged":    s["yoy_flagged"],
+                "cost_usd":       round(est_cost, 4),
+            })
+
+    except Exception as exc:
+        elapsed = round(time.monotonic() - start, 1)
+        with _lock:
+            _jobs[job_id].update({
+                "status":     "error",
+                "run_status": "failed",
+                "step":       "Failed",
+                "progress":   100,
+                "errors":     errors + [str(exc)],
+                "elapsed_s":  elapsed,
+            })
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 

@@ -300,6 +300,7 @@
       <button class="tab-btn active" onclick="switchTab('close',   this)">Month-End Close</button>
       <button class="tab-btn"        onclick="switchTab('bankrec', this)">Bank Rec</button>
       <button class="tab-btn"        onclick="switchTab('aging',   this)">AR/AP Aging</button>
+      <button class="tab-btn"        onclick="switchTab('flux',    this)">Flux Analysis</button>
     </div>
 
     <!-- Tab 1: Run Close -->
@@ -474,6 +475,76 @@
       </div>
     </div>
 
+    <!-- Tab 4: Flux Analysis -->
+    <div class="card tab-pane" id="tab-flux" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+      <div class="card-hdr">Flux Analysis &mdash; MoM &amp; YoY</div>
+      <div class="card-body">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label class="lbl">Client</label>
+            <select id="fl-client"><option value="">Loading...</option></select>
+          </div>
+          <div class="field">
+            <label class="lbl">Period</label>
+            <input type="month" id="fl-month">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Mode</label>
+          <div class="toggle">
+            <input type="radio" name="fl-mode" id="fl-full"  value="full" checked>
+            <label for="fl-full">Full &mdash; AI Commentary</label>
+            <input type="radio" name="fl-mode" id="fl-quick" value="quick">
+            <label for="fl-quick">Quick &mdash; No AI</label>
+          </div>
+        </div>
+
+        <div class="field model-row show" id="fl-model-row">
+          <label class="lbl">AI Model</label>
+          <select id="fl-model">
+            <option value="sonnet">Sonnet 4.6 &mdash; Recommended</option>
+            <option value="haiku">Haiku 4.5 &mdash; Fastest / Cheapest</option>
+            <option value="opus">Opus 4.7 &mdash; Most Capable</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Current Period Trial Balance</label>
+          <div class="zone" id="zone-fl-cur">
+            <input type="file" id="file-fl-cur" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📄</div>
+            <div class="zone-hint">Current month &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-fl-cur"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Prior Month Trial Balance</label>
+          <div class="zone" id="zone-fl-pm">
+            <input type="file" id="file-fl-pm" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📄</div>
+            <div class="zone-hint">Prior month (MoM) &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-fl-pm"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Prior Year Trial Balance <span style="font-weight:400;color:var(--grey-dk)">(optional &mdash; enables YoY analysis)</span></label>
+          <div class="zone" id="zone-fl-py">
+            <input type="file" id="file-fl-py" accept=".xlsx,.xls,.csv">
+            <div class="zone-icon">📅</div>
+            <div class="zone-hint">Same month, prior year &mdash; .xlsx / .csv</div>
+            <div class="zone-name" id="name-fl-py"></div>
+          </div>
+        </div>
+
+        <button class="btn-run" id="btn-flux" onclick="submitFlux()">RUN FLUX ANALYSIS</button>
+
+      </div>
+    </div>
+
   </div>
 
   <!-- ── Status / Results ───────────────────────────────────── -->
@@ -514,6 +585,13 @@
           <div class="stat"><div class="val" id="ag-flagged">--</div><div class="lbl">High Risk</div></div>
           <div class="stat"><div class="val" id="ag-overdue">--</div><div class="lbl">% Overdue</div></div>
           <div class="stat"><div class="val" id="ag-time">--</div><div class="lbl">Elapsed</div></div>
+        </div>
+        <!-- Flux stats -->
+        <div class="stats" id="stats-flux" style="display:none">
+          <div class="stat"><div class="val" id="fl-accounts">--</div><div class="lbl">Accounts</div></div>
+          <div class="stat"><div class="val" id="fl-mom">--</div><div class="lbl">MoM Flagged</div></div>
+          <div class="stat"><div class="val" id="fl-yoy">--</div><div class="lbl">YoY Flagged</div></div>
+          <div class="stat"><div class="val" id="fl-time">--</div><div class="lbl">Elapsed</div></div>
         </div>
 
         <div id="alerts"></div>
@@ -573,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   document.getElementById('inp-month').value = monthVal;
   document.getElementById('br-month').value  = monthVal;
+  document.getElementById('fl-month').value  = monthVal;
 
   // Close mode toggle
   document.querySelectorAll('input[name="mode"]').forEach(r =>
@@ -596,10 +675,20 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   );
 
+  // Flux mode toggle
+  document.querySelectorAll('input[name="fl-mode"]').forEach(r =>
+    r.addEventListener('change', () => {
+      document.getElementById('fl-model-row').classList.toggle('show', r.value === 'full' && r.checked);
+    })
+  );
+
   // File zones
-  wireZone('zone-cur',   'file-cur',   'name-cur');
-  wireZone('zone-pri',   'file-pri',   'name-pri');
-  wireZone('zone-aging', 'file-aging', 'name-aging');
+  wireZone('zone-cur',    'file-cur',    'name-cur');
+  wireZone('zone-pri',    'file-pri',    'name-pri');
+  wireZone('zone-aging',  'file-aging',  'name-aging');
+  wireZone('zone-fl-cur', 'file-fl-cur', 'name-fl-cur');
+  wireZone('zone-fl-pm',  'file-fl-pm',  'name-fl-pm');
+  wireZone('zone-fl-py',  'file-fl-py',  'name-fl-py');
 
   // Add one account row by default
   addAcctRow();
@@ -686,12 +775,12 @@ async function loadClients() {
     const opts = list.length
       ? list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')
       : '<option value="">No clients found</option>';
-    ['sel-client','br-client','ag-client'].forEach(id => {
+    ['sel-client','br-client','ag-client','fl-client'].forEach(id => {
       document.getElementById(id).innerHTML = opts;
     });
   } catch {
     const err = '<option value="">Error loading clients</option>';
-    ['sel-client','br-client','ag-client'].forEach(id => {
+    ['sel-client','br-client','ag-client','fl-client'].forEach(id => {
       document.getElementById(id).innerHTML = err;
     });
   }
@@ -859,6 +948,50 @@ async function submitAging() {
 }
 
 // ---------------------------------------------------------------------------
+// Submit: Flux Analysis
+// ---------------------------------------------------------------------------
+async function submitFlux() {
+  const client  = document.getElementById('fl-client').value;
+  const month   = document.getElementById('fl-month').value;
+  const mode    = document.querySelector('input[name="fl-mode"]:checked').value;
+  const model   = document.getElementById('fl-model').value;
+  const curFile = document.getElementById('file-fl-cur').files[0];
+  const pmFile  = document.getElementById('file-fl-pm').files[0];
+  const pyFile  = document.getElementById('file-fl-py').files[0];   // optional
+
+  if (!client || !month) { alert('Please select a client and period.'); return; }
+  if (!curFile)           { alert('Please upload the current period trial balance.'); return; }
+  if (!pmFile)            { alert('Please upload the prior month trial balance.'); return; }
+
+  const hasYoy  = !!pyFile;
+  _jobType = 'flux';
+  const btn = document.getElementById('btn-flux');
+  btn.disabled = true; btn.textContent = 'RUNNING...';
+  resetPanel(`Running Flux Analysis${hasYoy ? ' (MoM + YoY)' : ' (MoM)'}...`);
+
+  const fd = new FormData();
+  fd.append('client_id',     client);
+  fd.append('month',         month);
+  fd.append('mode',          mode);
+  fd.append('model',         model);
+  fd.append('current_tb',    curFile);
+  fd.append('prior_month_tb', pmFile);
+  if (pyFile) fd.append('prior_year_tb', pyFile);
+
+  try {
+    const r = await fetch('/api/flux', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { showError(d.error); btn.disabled = false; btn.textContent = 'RUN FLUX ANALYSIS'; return; }
+    _jobId = d.job_id;
+    if (_timer) clearInterval(_timer);
+    _timer = setInterval(poll, 1500);
+  } catch (e) {
+    showError('Network error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'RUN FLUX ANALYSIS';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Polling
 // ---------------------------------------------------------------------------
 async function poll() {
@@ -885,13 +1018,15 @@ function onDone(j) {
   document.getElementById('btn-rec').textContent = 'RUN ALL ACCOUNTS';
   const ba = document.getElementById('btn-aging');
   if (ba) { ba.disabled = false; ba.textContent = 'RUN AGING ANALYSIS'; }
+  const bf = document.getElementById('btn-flux');
+  if (bf) { bf.disabled = false; bf.textContent = 'RUN FLUX ANALYSIS'; }
 
   const ok = j.status === 'complete';
   document.getElementById('status-hdr').textContent = ok ? 'Complete' : 'Failed';
   setProgress(100, ok ? 'Done' : 'Failed');
 
   // Hide all stats panels, show the right one
-  ['stats-close','stats-rec','stats-multi-rec','stats-aging'].forEach(id => {
+  ['stats-close','stats-rec','stats-multi-rec','stats-aging','stats-flux'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
 
@@ -923,6 +1058,12 @@ function onDone(j) {
     document.getElementById('ag-flagged').textContent  = j.flagged_count ?? '--';
     document.getElementById('ag-overdue').textContent  = j.overdue_pct != null ? `${j.overdue_pct}%` : '--';
     document.getElementById('ag-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
+  } else if (jt === 'flux') {
+    document.getElementById('stats-flux').style.display = 'flex';
+    document.getElementById('fl-accounts').textContent = j.total_accounts ?? '--';
+    document.getElementById('fl-mom').textContent      = j.mom_flagged    ?? '--';
+    document.getElementById('fl-yoy').textContent      = j.has_yoy ? (j.yoy_flagged ?? '--') : 'N/A';
+    document.getElementById('fl-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   }
 
   const alertBox = document.getElementById('alerts');
@@ -945,6 +1086,14 @@ function onDone(j) {
     const cls = pct > 30 ? 'alert-warn' : 'alert-ok';
     alertBox.innerHTML = `<div class="alert ${cls}">
       ${j.entity_count} entities &mdash; ${pct}% overdue &mdash; ${j.flagged_count} flagged (61+ days)
+    </div>`;
+  } else if (jt === 'flux' && ok) {
+    const momF = j.mom_flagged ?? 0;
+    const yoyF = j.yoy_flagged ?? 0;
+    const cls  = (momF + yoyF) > 0 ? 'alert-warn' : 'alert-ok';
+    const yoyPart = j.has_yoy ? ` &mdash; YoY flagged: ${yoyF}` : '';
+    alertBox.innerHTML = `<div class="alert ${cls}">
+      ${j.total_accounts} accounts analyzed &mdash; MoM flagged: ${momF}${yoyPart}
     </div>`;
   } else if (ok) {
     alertBox.innerHTML = '<div class="alert alert-ok">All outputs generated successfully.</div>';
