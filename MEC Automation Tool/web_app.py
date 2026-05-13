@@ -80,6 +80,68 @@ def api_clients():
     return jsonify(result)
 
 
+@app.route("/api/clients", methods=["POST"])
+def api_create_client():
+    import re as _re
+
+    client_name = request.form.get("client_name", "").strip()
+    preparer    = request.form.get("preparer",    "").strip()
+    firm        = request.form.get("firm",        "").strip()
+    fye         = request.form.get("fiscal_year_end", "12-31").strip() or "12-31"
+
+    if not client_name:
+        return jsonify({"error": "Client name is required."}), 400
+
+    try:
+        threshold   = float(request.form.get("variance_threshold", "5.0"))
+        materiality = float(request.form.get("materiality_amount", "2500.0"))
+    except ValueError:
+        return jsonify({"error": "Threshold and materiality must be numbers."}), 400
+
+    client_id = _re.sub(r"[^a-zA-Z0-9]+", "_", client_name).strip("_").lower() or "client"
+    out_path  = _HERE / "config" / f"{client_id}.json"
+
+    if out_path.exists():
+        return jsonify({"error": f"A client named '{client_id}' already exists."}), 409
+
+    config = {
+        "client_id":          client_id,
+        "client_name":        client_name,
+        "preparer":           preparer,
+        "firm":               firm,
+        "fiscal_year_end":    fye,
+        "variance_threshold": threshold,
+        "materiality_amount": materiality,
+        "contact_info": {
+            "firm_name":            firm,
+            "preparer_name":        preparer,
+            "preparer_email":       "",
+            "preparer_phone":       "",
+            "client_contact_name":  "",
+            "client_contact_title": "",
+            "client_contact_email": "",
+        },
+        "report_settings": {
+            "logo_path":             "",
+            "include_ai_commentary": True,
+            "include_je_template":   True,
+            "currency_symbol":       "$",
+            "date_format":           "YYYY-MM-DD",
+            "decimal_places":        2,
+        },
+        "account_groups":  {},
+        "account_mapping": {},
+    }
+
+    try:
+        from config_manager import save_client_config
+        save_client_config(config, config_dir=str(_HERE / "config"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    return jsonify({"client_id": client_id, "client_name": client_name}), 201
+
+
 @app.route("/api/run", methods=["POST"])
 def api_run():
     client_id    = request.form.get("client_id", "").strip()

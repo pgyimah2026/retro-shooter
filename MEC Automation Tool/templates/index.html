@@ -280,6 +280,89 @@
       main { grid-template-columns: 1fr; }
       .full { grid-column: 1; }
     }
+
+    /* ── New Client Modal ──────────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+      width: 440px;
+      max-width: 95vw;
+      overflow: hidden;
+    }
+    .modal-hdr {
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-hdr button {
+      background: none; border: none; color: #fff;
+      font-size: 18px; cursor: pointer; line-height: 1;
+      opacity: 0.7;
+    }
+    .modal-hdr button:hover { opacity: 1; }
+    .modal-body { padding: 20px 18px; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--grey-md);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .btn-cancel {
+      padding: 8px 18px;
+      background: var(--grey);
+      border: 1px solid var(--grey-md);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-save {
+      padding: 8px 18px;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-save:hover { background: var(--navy-dk); }
+    .btn-new {
+      float: right;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      background: var(--blue-lt);
+      border: 1px solid var(--navy);
+      border-radius: 3px;
+      color: var(--navy);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      line-height: 1.6;
+    }
+    .btn-new:hover { background: var(--blue-md); }
   </style>
 </head>
 <body>
@@ -309,7 +392,7 @@
       <div class="card-body">
 
         <div class="field">
-          <label class="lbl">Client</label>
+          <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New Client</button></label>
           <select id="sel-client">
             <option value="">Loading...</option>
           </select>
@@ -371,7 +454,7 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
-            <label class="lbl">Client</label>
+            <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
             <select id="br-client"><option value="">Loading...</option></select>
           </div>
           <div class="field">
@@ -422,7 +505,7 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
-            <label class="lbl">Client</label>
+            <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
             <select id="ag-client"><option value="">Loading...</option></select>
           </div>
           <div class="field">
@@ -482,7 +565,7 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
-            <label class="lbl">Client</label>
+            <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
             <select id="fl-client"><option value="">Loading...</option></select>
           </div>
           <div class="field">
@@ -632,6 +715,70 @@
 
 </main>
 
+<!-- ── New Client Modal ─────────────────────────────────────── -->
+<div class="modal-backdrop" id="new-client-backdrop" onclick="closeNewClientModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      Add New Client
+      <button onclick="closeNewClientModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="lbl">Client Name <span style="color:#c00">*</span></label>
+        <input type="text" id="nc-name" placeholder="e.g. Smith Dental LLC"
+               style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+      </div>
+      <div class="modal-row">
+        <div class="field">
+          <label class="lbl">Preparer Name</label>
+          <input type="text" id="nc-preparer" placeholder="e.g. Jane Doe, CPA"
+                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        </div>
+        <div class="field">
+          <label class="lbl">Firm Name</label>
+          <input type="text" id="nc-firm" placeholder="e.g. Patrick LLC"
+                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="field">
+          <label class="lbl">Variance Threshold (%)</label>
+          <input type="number" id="nc-threshold" value="5.0" min="0.1" max="100" step="0.5"
+                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        </div>
+        <div class="field">
+          <label class="lbl">Materiality ($)</label>
+          <input type="number" id="nc-materiality" value="2500" min="0" step="100"
+                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl">Fiscal Year End</label>
+        <select id="nc-fye"
+                style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+          <option value="12-31">December 31</option>
+          <option value="01-31">January 31</option>
+          <option value="02-28">February 28</option>
+          <option value="03-31">March 31</option>
+          <option value="04-30">April 30</option>
+          <option value="05-31">May 31</option>
+          <option value="06-30">June 30</option>
+          <option value="07-31">July 31</option>
+          <option value="08-31">August 31</option>
+          <option value="09-30">September 30</option>
+          <option value="10-31">October 31</option>
+          <option value="11-30">November 30</option>
+        </select>
+      </div>
+      <div id="nc-error" style="display:none;color:#9C0006;font-size:12px;margin-top:6px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeNewClientModal()">Cancel</button>
+      <button class="btn-save"   id="nc-save-btn" onclick="saveNewClient()">Save Client</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ---------------------------------------------------------------------------
 // State
@@ -766,9 +913,73 @@ function removeAcctRow(i) {
 }
 
 // ---------------------------------------------------------------------------
+// New Client Modal
+// ---------------------------------------------------------------------------
+function openNewClientModal() {
+  document.getElementById('nc-name').value       = '';
+  document.getElementById('nc-preparer').value   = '';
+  document.getElementById('nc-firm').value       = '';
+  document.getElementById('nc-threshold').value  = '5.0';
+  document.getElementById('nc-materiality').value= '2500';
+  document.getElementById('nc-fye').value        = '12-31';
+  document.getElementById('nc-error').style.display = 'none';
+  document.getElementById('nc-save-btn').disabled = false;
+  document.getElementById('nc-save-btn').textContent = 'Save Client';
+  document.getElementById('new-client-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('nc-name').focus(), 50);
+}
+
+function closeNewClientModal(e) {
+  if (e && e.target !== document.getElementById('new-client-backdrop')) return;
+  document.getElementById('new-client-backdrop').classList.remove('open');
+}
+
+async function saveNewClient() {
+  const name       = document.getElementById('nc-name').value.trim();
+  const preparer   = document.getElementById('nc-preparer').value.trim();
+  const firm       = document.getElementById('nc-firm').value.trim();
+  const threshold  = document.getElementById('nc-threshold').value.trim();
+  const materiality= document.getElementById('nc-materiality').value.trim();
+  const fye        = document.getElementById('nc-fye').value;
+  const errEl      = document.getElementById('nc-error');
+  const btn        = document.getElementById('nc-save-btn');
+
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent = 'Client name is required.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const fd = new FormData();
+  fd.append('client_name',        name);
+  fd.append('preparer',           preparer);
+  fd.append('firm',               firm);
+  fd.append('variance_threshold', threshold);
+  fd.append('materiality_amount', materiality);
+  fd.append('fiscal_year_end',    fye);
+
+  try {
+    const r = await fetch('/api/clients', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) {
+      errEl.textContent = d.error;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Save Client';
+      return;
+    }
+    // Success: refresh all dropdowns then auto-select the new client
+    document.getElementById('new-client-backdrop').classList.remove('open');
+    await loadClients(d.client_id);
+  } catch (e) {
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Save Client';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Clients
 // ---------------------------------------------------------------------------
-async function loadClients() {
+async function loadClients(selectId) {
   try {
     const r    = await fetch('/api/clients');
     const list = await r.json();
@@ -777,6 +988,7 @@ async function loadClients() {
       : '<option value="">No clients found</option>';
     ['sel-client','br-client','ag-client','fl-client'].forEach(id => {
       document.getElementById(id).innerHTML = opts;
+      if (selectId) document.getElementById(id).value = selectId;
     });
   } catch {
     const err = '<option value="">Error loading clients</option>';
