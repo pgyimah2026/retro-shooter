@@ -363,6 +363,34 @@
       line-height: 1.6;
     }
     .btn-new:hover { background: var(--blue-md); }
+    .client-row { display: flex; gap: 6px; align-items: center; }
+    .client-row select { flex: 1; }
+    .btn-del-client {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      background: var(--red);
+      border: 1px solid #e0a0a8;
+      border-radius: 4px;
+      color: var(--red-dk);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+    .btn-del-client:hover { background: #f5b5be; }
+    .btn-del-confirm {
+      padding: 8px 18px;
+      background: var(--red-dk);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-del-confirm:hover { background: #7a0005; }
   </style>
 </head>
 <body>
@@ -393,9 +421,10 @@
 
         <div class="field">
           <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New Client</button></label>
-          <select id="sel-client">
-            <option value="">Loading...</option>
-          </select>
+          <div class="client-row">
+            <select id="sel-client"><option value="">Loading...</option></select>
+            <button class="btn-del-client" onclick="openDeleteClientModal('sel-client')" title="Delete selected client">🗑</button>
+          </div>
         </div>
 
         <div class="field">
@@ -455,7 +484,10 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
             <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
-            <select id="br-client"><option value="">Loading...</option></select>
+            <div class="client-row">
+              <select id="br-client"><option value="">Loading...</option></select>
+              <button class="btn-del-client" onclick="openDeleteClientModal('br-client')" title="Delete selected client">🗑</button>
+            </div>
           </div>
           <div class="field">
             <label class="lbl">Period</label>
@@ -506,7 +538,10 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
             <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
-            <select id="ag-client"><option value="">Loading...</option></select>
+            <div class="client-row">
+              <select id="ag-client"><option value="">Loading...</option></select>
+              <button class="btn-del-client" onclick="openDeleteClientModal('ag-client')" title="Delete selected client">🗑</button>
+            </div>
           </div>
           <div class="field">
             <label class="lbl">Period</label>
@@ -566,7 +601,10 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
             <label class="lbl">Client <button class="btn-new" onclick="openNewClientModal()">+ New</button></label>
-            <select id="fl-client"><option value="">Loading...</option></select>
+            <div class="client-row">
+              <select id="fl-client"><option value="">Loading...</option></select>
+              <button class="btn-del-client" onclick="openDeleteClientModal('fl-client')" title="Delete selected client">🗑</button>
+            </div>
           </div>
           <div class="field">
             <label class="lbl">Period</label>
@@ -714,6 +752,29 @@
   </div>
 
 </main>
+
+<!-- ── Delete Client Modal ──────────────────────────────────── -->
+<div class="modal-backdrop" id="del-client-backdrop" onclick="closeDeleteClientModal(event)">
+  <div class="modal" style="width:380px" onclick="event.stopPropagation()">
+    <div class="modal-hdr" style="background:#9C0006;">
+      Delete Client
+      <button onclick="closeDeleteClientModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:12px;font-size:13px;">
+        Are you sure you want to delete <strong id="del-client-name"></strong>?
+      </p>
+      <p style="font-size:12px;color:var(--grey-dk);">
+        This removes the client config file. Run history and output files are not affected.
+      </p>
+      <div id="del-error" style="display:none;color:#9C0006;font-size:12px;margin-top:10px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDeleteClientModal()">Cancel</button>
+      <button class="btn-del-confirm" id="del-confirm-btn" onclick="confirmDeleteClient()">Delete</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── New Client Modal ─────────────────────────────────────── -->
 <div class="modal-backdrop" id="new-client-backdrop" onclick="closeNewClientModal(event)">
@@ -910,6 +971,59 @@ function addAcctRow() {
 function removeAcctRow(i) {
   const el = document.getElementById(`acct-row-${i}`);
   if (el) el.remove();
+}
+
+// ---------------------------------------------------------------------------
+// Delete Client Modal
+// ---------------------------------------------------------------------------
+let _deleteClientId   = null;
+let _deleteClientName = null;
+
+function openDeleteClientModal(selectId) {
+  const sel = document.getElementById(selectId);
+  const id  = sel?.value;
+  const name = sel?.options[sel.selectedIndex]?.text;
+  if (!id) { alert('Please select a client first.'); return; }
+
+  _deleteClientId   = id;
+  _deleteClientName = name;
+  document.getElementById('del-client-name').textContent = name;
+  document.getElementById('del-error').style.display = 'none';
+  document.getElementById('del-confirm-btn').disabled = false;
+  document.getElementById('del-confirm-btn').textContent = 'Delete';
+  document.getElementById('del-client-backdrop').classList.add('open');
+}
+
+function closeDeleteClientModal(e) {
+  if (e && e.target !== document.getElementById('del-client-backdrop')) return;
+  document.getElementById('del-client-backdrop').classList.remove('open');
+  _deleteClientId = null;
+}
+
+async function confirmDeleteClient() {
+  if (!_deleteClientId) return;
+  const btn   = document.getElementById('del-confirm-btn');
+  const errEl = document.getElementById('del-error');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Deleting...';
+
+  try {
+    const r = await fetch(`/api/clients/${encodeURIComponent(_deleteClientId)}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.error) {
+      errEl.textContent = d.error;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Delete';
+      return;
+    }
+    document.getElementById('del-client-backdrop').classList.remove('open');
+    _deleteClientId = null;
+    await loadClients();
+  } catch (e) {
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
 }
 
 // ---------------------------------------------------------------------------

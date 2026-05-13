@@ -142,6 +142,21 @@ def api_create_client():
     return jsonify({"client_id": client_id, "client_name": client_name}), 201
 
 
+@app.route("/api/clients/<client_id>", methods=["DELETE"])
+def api_delete_client(client_id):
+    import re as _re
+    safe_id = _re.sub(r"[^a-zA-Z0-9_\-]", "", client_id)
+    if not safe_id:
+        return jsonify({"error": "Invalid client ID."}), 400
+
+    config_path = _HERE / "config" / f"{safe_id}.json"
+    if not config_path.exists():
+        return jsonify({"error": f"Client '{safe_id}' not found."}), 404
+
+    config_path.unlink()
+    return jsonify({"deleted": safe_id})
+
+
 @app.route("/api/run", methods=["POST"])
 def api_run():
     client_id    = request.form.get("client_id", "").strip()
