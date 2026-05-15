@@ -4,408 +4,628 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MEC Automation Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --navy:    #1F497D;
-      --navy-dk: #163660;
-      --blue-lt: #EBF3FB;
-      --blue-md: #D9E1F2;
-      --green:   #E2EFDA;
-      --green-dk:#375623;
-      --red:     #FFC7CE;
-      --red-dk:  #9C0006;
-      --yellow:  #FFEB9C;
-      --grey:    #F2F2F2;
-      --grey-md: #CCCCCC;
-      --grey-dk: #666666;
-      --shadow:  0 2px 8px rgba(0,0,0,0.09);
-      --radius:  6px;
+      /* Primary palette */
+      --primary:      #2563EB;
+      --primary-dk:   #1D4ED8;
+      --primary-lt:   #EFF6FF;
+      --primary-md:   #BFDBFE;
+      /* Semantic colours */
+      --success:      #059669;
+      --success-lt:   #ECFDF5;
+      --success-bd:   #6EE7B7;
+      --warning:      #D97706;
+      --warning-lt:   #FFFBEB;
+      --warning-bd:   #FCD34D;
+      --danger:       #DC2626;
+      --danger-lt:    #FEF2F2;
+      --danger-bd:    #FCA5A5;
+      /* Neutrals */
+      --text:         #0F172A;
+      --text-muted:   #64748B;
+      --border:       #E2E8F0;
+      --bg:           #F1F5F9;
+      --card:         #FFFFFF;
+      /* Shadows */
+      --shadow-sm:    0 1px 3px rgba(15,23,42,0.07), 0 1px 2px rgba(15,23,42,0.04);
+      --shadow-md:    0 4px 16px rgba(15,23,42,0.09), 0 2px 6px rgba(15,23,42,0.04);
+      --shadow-lg:    0 10px 40px rgba(15,23,42,0.14);
+      --shadow-btn:   0 4px 14px rgba(37,99,235,0.38);
+      /* Radii */
+      --radius-sm:    6px;
+      --radius-md:    10px;
+      --radius-lg:    16px;
+
+      /* ── Legacy aliases (used in inline JS styles) ── */
+      --navy:         #2563EB;
+      --navy-dk:      #1D4ED8;
+      --blue-lt:      #EFF6FF;
+      --blue-md:      #BFDBFE;
+      --green:        #ECFDF5;
+      --green-dk:     #059669;
+      --red:          #FEE2E2;
+      --red-dk:       #DC2626;
+      --grey:         #F8FAFC;
+      --grey-md:      #E2E8F0;
+      --grey-dk:      #64748B;
+      --radius:       10px;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
       font-size: 14px;
-      background: #eef1f5;
-      color: #333;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+    }
+
+    /* ── Top accent stripe ───────────────────────────────────── */
+    body::before {
+      content: '';
+      display: block;
+      height: 4px;
+      background: linear-gradient(90deg, #0F2875, #2563EB, #60A5FA, #34D399);
     }
 
     /* ── Header ──────────────────────────────────────────────── */
     header {
-      background: var(--navy);
+      background: linear-gradient(135deg, #0F2875 0%, #1E40AF 50%, #2563EB 100%);
       color: #fff;
-      padding: 14px 32px;
+      padding: 0 32px;
+      height: 62px;
       display: flex;
       align-items: center;
       gap: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      box-shadow: 0 4px 20px rgba(15,23,42,0.22);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .logo {
-      width: 38px; height: 38px;
-      background: rgba(255,255,255,0.15);
-      border-radius: 4px;
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.28);
+      border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 900; letter-spacing: -1px;
+      font-size: 13px; font-weight: 800; letter-spacing: -0.5px;
+      flex-shrink: 0;
     }
-    header h1 { font-size: 18px; font-weight: 700; }
-    header p  { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+    .header-text h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
+    .header-text p  { font-size: 11px; opacity: 0.65; margin-top: 1px; }
+    .header-pill {
+      margin-left: auto;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.92);
+      text-transform: uppercase;
+    }
 
     /* ── Layout ─────────────────────────────────────────────── */
     main {
-      max-width: 1020px;
-      margin: 24px auto;
-      padding: 0 20px;
+      max-width: 1060px;
+      margin: 28px auto;
+      padding: 0 24px;
       display: grid;
-      grid-template-columns: 380px 1fr;
+      grid-template-columns: 410px 1fr;
       gap: 20px;
     }
     .full { grid-column: 1 / -1; }
 
     /* ── Cards ───────────────────────────────────────────────── */
     .card {
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      background: var(--card);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
       overflow: hidden;
+      border: 1px solid var(--border);
     }
     .card-hdr {
-      background: var(--navy);
+      background: linear-gradient(135deg, #1E3A8A, #2563EB);
       color: #fff;
-      padding: 10px 18px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-    }
-    .card-body { padding: 18px; }
-
-    /* ── Form elements ───────────────────────────────────────── */
-    .field { margin-bottom: 14px; }
-    label.lbl {
-      display: block;
+      padding: 11px 20px;
       font-size: 11px;
       font-weight: 700;
-      color: var(--grey-dk);
-      margin-bottom: 5px;
+      letter-spacing: 0.6px;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    select, input[type="month"] {
+    .card-hdr::before {
+      content: '';
+      display: inline-block;
+      width: 3px; height: 14px;
+      background: rgba(255,255,255,0.45);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 3px;
+      background: #DDE5F0;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      padding: 6px 6px 0;
+      border: 1px solid var(--border);
+      border-bottom: none;
+    }
+    .tab-btn {
+      padding: 8px 13px;
+      font-size: 11px; font-weight: 600; font-family: inherit;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      cursor: pointer;
+      transition: color .15s, background .15s;
+      letter-spacing: 0.1px;
+    }
+    .tab-btn:hover:not(.active) {
+      color: var(--primary);
+      background: rgba(255,255,255,0.55);
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 -2px 0 var(--primary) inset;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Tab cards connect seamlessly to the tab bar */
+    .card.tab-pane {
+      border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
+      border-top: none !important;
+    }
+
+    /* ── Form elements ───────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    label.lbl {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select,
+    input[type="month"],
+    input[type="text"],
+    input[type="number"] {
       width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--grey-md);
-      border-radius: 4px;
+      padding: 9px 11px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
       font-size: 13px;
       font-family: inherit;
-      color: #333;
+      font-weight: 500;
+      color: var(--text);
       background: #fff;
-      transition: border-color .15s;
-    }
-    select:focus, input:focus {
+      transition: border-color .15s, box-shadow .15s;
       outline: none;
-      border-color: var(--navy);
-      box-shadow: 0 0 0 2px rgba(31,73,125,0.12);
+    }
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%2364748B' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+    select:focus,
+    input[type="month"]:focus,
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
     }
 
     /* ── Mode toggle ─────────────────────────────────────────── */
     .toggle {
       display: flex;
-      border: 1px solid var(--grey-md);
-      border-radius: 4px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
       overflow: hidden;
+      padding: 3px;
+      gap: 3px;
     }
     .toggle input[type="radio"] { display: none; }
     .toggle label {
       flex: 1; text-align: center;
-      padding: 8px 10px;
+      padding: 7px 8px;
       cursor: pointer;
-      font-size: 12px; font-weight: 600;
-      color: var(--grey-dk);
-      background: #fff;
-      border-right: 1px solid var(--grey-md);
-      transition: background .15s, color .15s;
+      font-size: 11px; font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border-radius: 4px;
+      transition: all .15s ease;
       text-transform: none; letter-spacing: 0; margin: 0;
     }
-    .toggle label:last-child { border-right: none; }
-    .toggle input:checked + label { background: var(--navy); color: #fff; }
+    .toggle label:hover { color: var(--primary); }
+    .toggle input:checked + label {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
 
     /* ── File upload zones ───────────────────────────────────── */
     .zone {
-      border: 2px dashed var(--grey-md);
-      border-radius: 4px;
-      padding: 14px 12px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 12px;
       text-align: center;
       cursor: pointer;
-      transition: border-color .15s, background .15s;
+      transition: all .2s ease;
       position: relative;
+      background: var(--bg);
     }
-    .zone:hover, .zone.drag { border-color: var(--navy); background: var(--blue-lt); }
-    .zone.filled { border-style: solid; border-color: var(--navy); background: var(--blue-lt); }
+    .zone:hover, .zone.drag {
+      border-color: var(--primary);
+      border-style: solid;
+      background: var(--primary-lt);
+    }
+    .zone.filled {
+      border-style: solid;
+      border-color: var(--primary);
+      background: var(--primary-lt);
+    }
     .zone input[type="file"] {
       position: absolute; inset: 0; opacity: 0;
       cursor: pointer; width: 100%; height: 100%;
     }
-    .zone-icon { font-size: 20px; }
-    .zone-hint { font-size: 11px; color: var(--grey-dk); margin-top: 3px; }
-    .zone-name { font-size: 12px; color: var(--navy); font-weight: 600; margin-top: 3px; }
+    .zone-icon { font-size: 22px; line-height: 1; }
+    .zone-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+    .zone-name { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 4px; }
 
     /* ── Run button ──────────────────────────────────────────── */
     .btn-run {
-      width: 100%; padding: 12px;
-      background: var(--navy); color: #fff;
-      border: none; border-radius: 4px;
-      font-size: 13px; font-weight: 700; font-family: inherit;
-      letter-spacing: 1px; cursor: pointer;
-      transition: background .15s; margin-top: 6px;
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, var(--primary-dk), var(--primary));
+      color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 700; font-family: inherit;
+      letter-spacing: 1.5px; cursor: pointer;
+      transition: all .2s ease; margin-top: 6px;
+      box-shadow: var(--shadow-btn);
     }
-    .btn-run:hover:not(:disabled) { background: var(--navy-dk); }
-    .btn-run:disabled { background: var(--grey-md); cursor: not-allowed; }
+    .btn-run:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1730AA, var(--primary-dk));
+      box-shadow: 0 6px 20px rgba(37,99,235,0.48);
+      transform: translateY(-1px);
+    }
+    .btn-run:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: var(--shadow-btn);
+    }
+    .btn-run:disabled {
+      background: var(--border);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
 
     /* ── Status panel ────────────────────────────────────────── */
-    #status-card { display: none; }
+    #status-card  { display: none; }
 
     .progress-track {
-      background: var(--grey); border-radius: 20px;
-      height: 8px; overflow: hidden; margin-bottom: 6px;
+      background: var(--border);
+      border-radius: 20px;
+      height: 8px; overflow: hidden; margin-bottom: 8px;
     }
     .progress-fill {
-      height: 100%; background: var(--navy);
-      border-radius: 20px; transition: width .4s ease; width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #1D4ED8, #3B82F6, #60A5FA, #3B82F6, #1D4ED8);
+      background-size: 300% 100%;
+      border-radius: 20px;
+      transition: width .4s ease;
+      width: 0%;
+      animation: moveGradient 2.2s linear infinite;
     }
-    .progress-step { font-size: 12px; color: var(--grey-dk); text-align: center; }
-
-    /* Stats */
-    .stats { display: flex; gap: 10px; margin: 16px 0; }
-    .stat  {
-      flex: 1; background: var(--blue-lt);
-      border-radius: 4px; padding: 10px 8px; text-align: center;
+    @keyframes moveGradient {
+      0%   { background-position: 0% center; }
+      100% { background-position: 300% center; }
     }
-    .stat .val { font-size: 20px; font-weight: 700; color: var(--navy); }
-    .stat .lbl { font-size: 10px; color: var(--grey-dk); text-transform: uppercase; margin-top: 2px; }
+    .progress-step {
+      font-size: 12px; color: var(--text-muted);
+      text-align: center; font-weight: 500;
+    }
 
-    /* Alerts */
+    /* ── Stats grid ──────────────────────────────────────────── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+    .stat {
+      background: linear-gradient(145deg, var(--primary-lt), #fff);
+      border: 1px solid var(--primary-md);
+      border-radius: var(--radius-md);
+      padding: 14px 10px;
+      text-align: center;
+      transition: transform .15s;
+    }
+    .stat:hover { transform: translateY(-2px); }
+    .stat .val {
+      font-size: 22px; font-weight: 800;
+      color: var(--primary); line-height: 1;
+    }
+    .stat .lbl {
+      font-size: 9px; color: var(--text-muted);
+      text-transform: uppercase; margin-top: 5px;
+      font-weight: 700; letter-spacing: 0.6px;
+    }
+
+    /* ── Alerts ──────────────────────────────────────────────── */
     .alert {
-      padding: 9px 13px; border-radius: 4px;
-      font-size: 12px; margin-bottom: 8px;
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 500; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .alert-ok   { background: var(--green);  color: var(--green-dk); }
-    .alert-warn { background: var(--yellow); color: #7d5700; }
-    .alert-err  { background: var(--red);    color: var(--red-dk); }
+    .alert-ok   { background: var(--success-lt); color: var(--success); border: 1px solid var(--success-bd); }
+    .alert-warn { background: var(--warning-lt); color: var(--warning); border: 1px solid var(--warning-bd); }
+    .alert-err  { background: var(--danger-lt);  color: var(--danger);  border: 1px solid var(--danger-bd);  }
 
-    /* Download links */
-    .dl-links { margin-top: 12px; }
-    .dl-lbl { font-size: 10px; font-weight: 700; color: var(--grey-dk); text-transform: uppercase; margin-bottom: 8px; }
+    /* ── Download links ──────────────────────────────────────── */
+    .dl-links { margin-top: 16px; }
+    .dl-lbl {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;
+    }
     .dl-btn {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 12px;
-      border: 1px solid var(--grey-md); border-radius: 4px;
-      text-decoration: none; color: var(--navy);
-      font-weight: 600; font-size: 12px;
-      transition: background .15s; background: #fff;
-      margin-bottom: 7px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      text-decoration: none; color: var(--text);
+      font-weight: 500; font-size: 13px;
+      transition: all .18s ease;
+      background: #fff; margin-bottom: 8px;
+      box-shadow: var(--shadow-sm);
     }
-    .dl-btn:hover { background: var(--blue-lt); border-color: var(--navy); }
+    .dl-btn:hover {
+      background: var(--primary-lt);
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateX(4px);
+      box-shadow: var(--shadow-md);
+    }
     .dl-ext {
-      font-size: 10px; font-weight: 700;
-      padding: 2px 6px; border-radius: 3px;
-      background: var(--navy); color: #fff; flex-shrink: 0;
+      font-size: 10px; font-weight: 800;
+      padding: 3px 8px; border-radius: 4px;
+      background: var(--primary); color: #fff;
+      flex-shrink: 0; letter-spacing: 0.4px;
     }
 
-    /* ── History table ───────────────────────────────────────── */
+    /* ── Run history table ───────────────────────────────────── */
     .tbl-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th {
-      background: var(--navy); color: #fff;
-      padding: 8px 12px; text-align: left;
-      font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
-      white-space: nowrap;
+      background: linear-gradient(135deg, #1E3A8A, #2563EB);
+      color: #fff;
+      padding: 10px 14px; text-align: left;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+      text-transform: uppercase; white-space: nowrap;
     }
-    td { padding: 8px 12px; border-bottom: 1px solid var(--grey); white-space: nowrap; }
+    td {
+      padding: 10px 14px; border-bottom: 1px solid #F1F5F9;
+      white-space: nowrap; color: var(--text); font-weight: 500;
+    }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--blue-lt); }
-    .badge {
-      display: inline-block; padding: 2px 8px;
-      border-radius: 10px; font-size: 10px; font-weight: 700;
-    }
-    .ok   { background: var(--green);  color: var(--green-dk); }
-    .warn { background: var(--yellow); color: #7d5700; }
-    .fail { background: var(--red);    color: var(--red-dk); }
+    tr:nth-child(even) td { background: #FAFBFD; }
+    tr:hover td { background: var(--primary-lt) !important; }
 
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .ok   { background: var(--success-lt); color: var(--success); border: 1px solid var(--success-bd); }
+    .warn { background: var(--warning-lt); color: var(--warning); border: 1px solid var(--warning-bd); }
+    .fail { background: var(--danger-lt);  color: var(--danger);  border: 1px solid var(--danger-bd);  }
+
+    /* ── Model row visibility ────────────────────────────────── */
     .model-row { display: none; }
     .model-row.show { display: block; }
 
-    /* ── Tabs ────────────────────────────────────────────────── */
-    .tabs {
-      display: flex; gap: 0;
-      border-bottom: 2px solid var(--navy);
-      margin-bottom: 0;
-    }
-    .tab-btn {
-      padding: 9px 22px;
-      font-size: 12px; font-weight: 700; font-family: inherit;
-      color: var(--grey-dk); background: #fff;
-      border: 1px solid var(--grey-md); border-bottom: none;
-      border-radius: 4px 4px 0 0; cursor: pointer;
-      transition: background .15s, color .15s;
-      margin-right: 4px;
-    }
-    .tab-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-
-    /* ── Balance input ───────────────────────────────────────── */
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--grey-md);
-      border-radius: 4px;
-      font-size: 13px; font-family: inherit;
-      color: #333; background: #fff;
-      transition: border-color .15s;
-    }
-    input[type="text"]:focus, input[type="number"]:focus {
-      outline: none;
-      border-color: var(--navy);
-      box-shadow: 0 0 0 2px rgba(31,73,125,0.12);
-    }
-
-    /* ── Rec status tile ─────────────────────────────────────── */
+    /* ── Rec banner ──────────────────────────────────────────── */
     .rec-banner {
-      padding: 10px 14px; border-radius: 4px;
+      padding: 10px 14px; border-radius: var(--radius-sm);
       font-size: 13px; font-weight: 700; text-align: center;
       margin-bottom: 10px;
     }
 
-    @media (max-width: 700px) {
-      main { grid-template-columns: 1fr; }
-      .full { grid-column: 1; }
-    }
-
-    /* ── New Client Modal ──────────────────────────────────── */
+    /* ── Modal ───────────────────────────────────────────────── */
     .modal-backdrop {
       display: none;
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
+      background: rgba(15,23,42,0.55);
       z-index: 1000;
       align-items: center;
       justify-content: center;
+      backdrop-filter: blur(4px);
     }
     .modal-backdrop.open { display: flex; }
     .modal {
       background: #fff;
-      border-radius: var(--radius);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
-      width: 440px;
-      max-width: 95vw;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 440px; max-width: 95vw;
       overflow: hidden;
+      animation: modalPop .2s cubic-bezier(.22,.68,0,1.2);
+    }
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(.95) translateY(-8px); }
+      to   { opacity: 1; transform: scale(1)  translateY(0); }
     }
     .modal-hdr {
-      background: var(--navy);
+      background: linear-gradient(135deg, #1E3A8A, #2563EB);
       color: #fff;
-      padding: 12px 18px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 14px 20px;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: space-between;
     }
     .modal-hdr button {
-      background: none; border: none; color: #fff;
-      font-size: 18px; cursor: pointer; line-height: 1;
-      opacity: 0.7;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff; font-size: 16px; cursor: pointer;
+      line-height: 1; border-radius: 6px;
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
     }
-    .modal-hdr button:hover { opacity: 1; }
-    .modal-body { padding: 20px 18px; }
-    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-hdr button:hover { background: rgba(255,255,255,0.28); }
+    .modal-body { padding: 22px 20px; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .modal-footer {
-      padding: 12px 18px;
-      border-top: 1px solid var(--grey-md);
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: flex-end;
+      background: var(--bg);
     }
+
+    /* ── Button variants ─────────────────────────────────────── */
     .btn-cancel {
-      padding: 8px 18px;
-      background: var(--grey);
-      border: 1px solid var(--grey-md);
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      font-weight: 600;
+      padding: 9px 20px;
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit;
+      cursor: pointer; font-weight: 600; color: var(--text-muted);
+      transition: all .15s;
     }
+    .btn-cancel:hover { background: var(--bg); border-color: var(--text-muted); }
+
     .btn-save {
-      padding: 8px 18px;
-      background: var(--navy);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      font-weight: 700;
+      padding: 9px 20px;
+      background: linear-gradient(135deg, var(--primary-dk), var(--primary));
+      color: #fff; border: none;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit;
+      cursor: pointer; font-weight: 700;
+      box-shadow: var(--shadow-btn);
+      transition: all .15s;
     }
-    .btn-save:hover { background: var(--navy-dk); }
+    .btn-save:hover {
+      background: linear-gradient(135deg, #1730AA, var(--primary-dk));
+      box-shadow: 0 6px 18px rgba(37,99,235,0.45);
+    }
+
     .btn-new {
-      float: right;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 8px;
-      background: var(--blue-lt);
-      border: 1px solid var(--navy);
-      border-radius: 3px;
-      color: var(--navy);
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      line-height: 1.6;
+      font-size: 10px; font-weight: 700;
+      padding: 3px 10px;
+      background: var(--primary-lt);
+      border: 1px solid var(--primary-md);
+      border-radius: 20px; color: var(--primary);
+      cursor: pointer; transition: all .15s; letter-spacing: 0.2px;
     }
-    .btn-new:hover { background: var(--blue-md); }
-    .client-row { display: flex; gap: 6px; align-items: center; }
+    .btn-new:hover { background: var(--primary-md); }
+
+    .client-row { display: flex; gap: 8px; align-items: center; }
     .client-row select { flex: 1; }
+
     .btn-del-client {
       flex-shrink: 0;
-      width: 32px; height: 32px;
-      background: var(--red);
-      border: 1px solid #e0a0a8;
-      border-radius: 4px;
-      color: var(--red-dk);
-      font-size: 15px;
+      width: 36px; height: 36px;
+      background: var(--danger-lt);
+      border: 1.5px solid var(--danger-bd);
+      border-radius: var(--radius-sm);
+      color: var(--danger); font-size: 15px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      padding: 0;
-      line-height: 1;
+      padding: 0; line-height: 1;
+      transition: all .15s;
     }
-    .btn-del-client:hover { background: #f5b5be; }
+    .btn-del-client:hover { background: #FECACA; }
+
     .btn-del-confirm {
-      padding: 8px 18px;
-      background: var(--red-dk);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      font-weight: 700;
+      padding: 9px 20px;
+      background: var(--danger); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit;
+      cursor: pointer; font-weight: 700;
+      transition: background .15s;
+      box-shadow: 0 4px 12px rgba(220,38,38,0.35);
     }
-    .btn-del-confirm:hover { background: #7a0005; }
+    .btn-del-confirm:hover { background: #B91C1C; }
+
+    /* ── Placeholder card ────────────────────────────────────── */
+    .placeholder-body {
+      padding: 50px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .placeholder-icon { font-size: 44px; margin-bottom: 18px; opacity: .7; }
+    .placeholder-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .placeholder-hint  { font-size: 12px; line-height: 1.7; }
+
+    /* ── Account row (bank rec) ──────────────────────────────── */
+    .acct-row-card {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px; margin-bottom: 10px;
+      position: relative;
+      background: var(--bg);
+      transition: border-color .15s;
+    }
+    .acct-row-card:hover { border-color: var(--primary-md); }
+
+    /* ── Add Account button ──────────────────────────────────── */
+    .btn-add-acct {
+      margin-top: 8px; padding: 8px 16px;
+      background: var(--primary-lt);
+      border: 1.5px solid var(--primary-md);
+      border-radius: var(--radius-sm);
+      color: var(--primary); font-weight: 700; font-size: 12px;
+      cursor: pointer; font-family: inherit;
+      transition: all .15s;
+    }
+    .btn-add-acct:hover { background: var(--primary-md); }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+      .full { grid-column: 1; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      header { padding: 0 16px; }
+      .header-pill { display: none; }
+    }
   </style>
 </head>
 <body>
 
+<!-- ── Top accent bar is rendered by body::before ──────────────── -->
+
 <header>
   <div class="logo">ME</div>
-  <div>
+  <div class="header-text">
     <h1>MEC Automation Tool</h1>
-    <p>Month-End Close &nbsp;|&nbsp; Patrick LLC</p>
+    <p>Month-End Close &nbsp;&middot;&nbsp; Patrick LLC</p>
   </div>
+  <div class="header-pill">AI-Powered</div>
 </header>
 
 <main>
 
-  <!-- ── Left panel: tabs ───────────────────────────────────── -->
+  <!-- ── Left panel: tabs + forms ──────────────────────────────── -->
   <div>
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('close',   this)">Month-End Close</button>
@@ -415,7 +635,7 @@
     </div>
 
     <!-- Tab 1: Run Close -->
-    <div class="card tab-pane active" id="tab-close" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+    <div class="card tab-pane active" id="tab-close">
       <div class="card-hdr">Run Close</div>
       <div class="card-body">
 
@@ -477,7 +697,7 @@
     </div>
 
     <!-- Tab 2: Multi-Account Bank Rec -->
-    <div class="card tab-pane" id="tab-bankrec" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+    <div class="card tab-pane" id="tab-bankrec">
       <div class="card-hdr">Bank Reconciliation &mdash; All Accounts</div>
       <div class="card-body">
 
@@ -517,12 +737,7 @@
         <div class="field">
           <label class="lbl">Bank Accounts</label>
           <div id="acct-rows"></div>
-          <button type="button" onclick="addAcctRow()"
-            style="margin-top:8px;padding:6px 14px;background:var(--blue-lt);
-                   border:1px solid var(--navy);border-radius:4px;
-                   color:var(--navy);font-weight:700;font-size:12px;cursor:pointer;">
-            + Add Account
-          </button>
+          <button type="button" class="btn-add-acct" onclick="addAcctRow()">+ Add Account</button>
         </div>
 
         <button class="btn-run" id="btn-rec" onclick="submitRec()">RUN ALL ACCOUNTS</button>
@@ -531,7 +746,7 @@
     </div>
 
     <!-- Tab 3: AR/AP Aging -->
-    <div class="card tab-pane" id="tab-aging" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+    <div class="card tab-pane" id="tab-aging">
       <div class="card-hdr">AR / AP Aging Analysis</div>
       <div class="card-body">
 
@@ -594,7 +809,7 @@
     </div>
 
     <!-- Tab 4: Flux Analysis -->
-    <div class="card tab-pane" id="tab-flux" style="border-radius:0 var(--radius) var(--radius) var(--radius)">
+    <div class="card tab-pane" id="tab-flux">
       <div class="card-hdr">Flux Analysis &mdash; MoM &amp; YoY</div>
       <div class="card-body">
 
@@ -652,7 +867,7 @@
         </div>
 
         <div class="field">
-          <label class="lbl">Prior Year Trial Balance <span style="font-weight:400;color:var(--grey-dk)">(optional &mdash; enables YoY analysis)</span></label>
+          <label class="lbl">Prior Year Trial Balance <span style="font-weight:400;color:var(--text-muted)">(optional &mdash; enables YoY)</span></label>
           <div class="zone" id="zone-fl-py">
             <input type="file" id="file-fl-py" accept=".xlsx,.xls,.csv">
             <div class="zone-icon">📅</div>
@@ -666,67 +881,90 @@
       </div>
     </div>
 
-  </div>
+  </div><!-- /left panel -->
 
-  <!-- ── Status / Results ───────────────────────────────────── -->
-  <div class="card" id="status-card">
-    <div class="card-hdr" id="status-hdr">Running...</div>
-    <div class="card-body">
+  <!-- ── Right column: placeholder → status card ───────────────── -->
+  <div>
 
-      <div class="progress-track">
-        <div class="progress-fill" id="prog-fill"></div>
-      </div>
-      <div class="progress-step" id="prog-step">Starting...</div>
-
-      <div id="results" style="display:none; margin-top:16px;">
-        <!-- Close stats -->
-        <div class="stats" id="stats-close">
-          <div class="stat"><div class="val" id="s-accounts">--</div><div class="lbl">Accounts</div></div>
-          <div class="stat"><div class="val" id="s-flagged">--</div><div class="lbl">Flagged</div></div>
-          <div class="stat"><div class="val" id="s-cost">--</div><div class="lbl">AI Cost</div></div>
-          <div class="stat"><div class="val" id="s-time">--</div><div class="lbl">Elapsed</div></div>
-        </div>
-        <!-- Bank rec stats (single) -->
-        <div class="stats" id="stats-rec" style="display:none">
-          <div class="stat"><div class="val" id="r-matched">--</div><div class="lbl">Matched</div></div>
-          <div class="stat"><div class="val" id="r-exceptions">--</div><div class="lbl">Exceptions</div></div>
-          <div class="stat"><div class="val" id="r-cost">--</div><div class="lbl">AI Cost</div></div>
-          <div class="stat"><div class="val" id="r-time">--</div><div class="lbl">Elapsed</div></div>
-        </div>
-        <!-- Multi bank rec stats -->
-        <div class="stats" id="stats-multi-rec" style="display:none">
-          <div class="stat"><div class="val" id="mr-reconciled">--</div><div class="lbl">Reconciled</div></div>
-          <div class="stat"><div class="val" id="mr-exceptions">--</div><div class="lbl">Exceptions</div></div>
-          <div class="stat"><div class="val" id="mr-cost">--</div><div class="lbl">AI Cost</div></div>
-          <div class="stat"><div class="val" id="mr-time">--</div><div class="lbl">Elapsed</div></div>
-        </div>
-        <!-- Aging stats -->
-        <div class="stats" id="stats-aging" style="display:none">
-          <div class="stat"><div class="val" id="ag-entities">--</div><div class="lbl">Entities</div></div>
-          <div class="stat"><div class="val" id="ag-flagged">--</div><div class="lbl">High Risk</div></div>
-          <div class="stat"><div class="val" id="ag-overdue">--</div><div class="lbl">% Overdue</div></div>
-          <div class="stat"><div class="val" id="ag-time">--</div><div class="lbl">Elapsed</div></div>
-        </div>
-        <!-- Flux stats -->
-        <div class="stats" id="stats-flux" style="display:none">
-          <div class="stat"><div class="val" id="fl-accounts">--</div><div class="lbl">Accounts</div></div>
-          <div class="stat"><div class="val" id="fl-mom">--</div><div class="lbl">MoM Flagged</div></div>
-          <div class="stat"><div class="val" id="fl-yoy">--</div><div class="lbl">YoY Flagged</div></div>
-          <div class="stat"><div class="val" id="fl-time">--</div><div class="lbl">Elapsed</div></div>
-        </div>
-
-        <div id="alerts"></div>
-
-        <div class="dl-links">
-          <div class="dl-lbl">Downloads</div>
-          <div id="dl-links"></div>
+    <!-- Shown before any job is submitted -->
+    <div class="card" id="placeholder-card">
+      <div class="card-hdr">Results</div>
+      <div class="placeholder-body">
+        <div class="placeholder-icon">📊</div>
+        <div class="placeholder-title">Ready to Run</div>
+        <div class="placeholder-hint">
+          Configure your settings on the left, upload the required trial balance files,
+          then click the Run button to generate your outputs.
         </div>
       </div>
-
     </div>
-  </div>
 
-  <!-- ── Run History ────────────────────────────────────────── -->
+    <!-- Status card — hidden until a job starts -->
+    <div class="card" id="status-card">
+      <div class="card-hdr" id="status-hdr">Running...</div>
+      <div class="card-body">
+
+        <div class="progress-track">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="progress-step" id="prog-step">Starting...</div>
+
+        <div id="results" style="display:none; margin-top:16px;">
+
+          <!-- Close stats -->
+          <div class="stats" id="stats-close">
+            <div class="stat"><div class="val" id="s-accounts">--</div><div class="lbl">Accounts</div></div>
+            <div class="stat"><div class="val" id="s-flagged">--</div><div class="lbl">Flagged</div></div>
+            <div class="stat"><div class="val" id="s-cost">--</div><div class="lbl">AI Cost</div></div>
+            <div class="stat"><div class="val" id="s-time">--</div><div class="lbl">Elapsed</div></div>
+          </div>
+
+          <!-- Single bank rec stats -->
+          <div class="stats" id="stats-rec" style="display:none">
+            <div class="stat"><div class="val" id="r-matched">--</div><div class="lbl">Matched</div></div>
+            <div class="stat"><div class="val" id="r-exceptions">--</div><div class="lbl">Exceptions</div></div>
+            <div class="stat"><div class="val" id="r-cost">--</div><div class="lbl">AI Cost</div></div>
+            <div class="stat"><div class="val" id="r-time">--</div><div class="lbl">Elapsed</div></div>
+          </div>
+
+          <!-- Multi bank rec stats -->
+          <div class="stats" id="stats-multi-rec" style="display:none">
+            <div class="stat"><div class="val" id="mr-reconciled">--</div><div class="lbl">Reconciled</div></div>
+            <div class="stat"><div class="val" id="mr-exceptions">--</div><div class="lbl">Exceptions</div></div>
+            <div class="stat"><div class="val" id="mr-cost">--</div><div class="lbl">AI Cost</div></div>
+            <div class="stat"><div class="val" id="mr-time">--</div><div class="lbl">Elapsed</div></div>
+          </div>
+
+          <!-- Aging stats -->
+          <div class="stats" id="stats-aging" style="display:none">
+            <div class="stat"><div class="val" id="ag-entities">--</div><div class="lbl">Entities</div></div>
+            <div class="stat"><div class="val" id="ag-flagged">--</div><div class="lbl">High Risk</div></div>
+            <div class="stat"><div class="val" id="ag-overdue">--</div><div class="lbl">% Overdue</div></div>
+            <div class="stat"><div class="val" id="ag-time">--</div><div class="lbl">Elapsed</div></div>
+          </div>
+
+          <!-- Flux stats -->
+          <div class="stats" id="stats-flux" style="display:none">
+            <div class="stat"><div class="val" id="fl-accounts">--</div><div class="lbl">Accounts</div></div>
+            <div class="stat"><div class="val" id="fl-mom">--</div><div class="lbl">MoM Flagged</div></div>
+            <div class="stat"><div class="val" id="fl-yoy">--</div><div class="lbl">YoY Flagged</div></div>
+            <div class="stat"><div class="val" id="fl-time">--</div><div class="lbl">Elapsed</div></div>
+          </div>
+
+          <div id="alerts"></div>
+
+          <div class="dl-links">
+            <div class="dl-lbl">Downloads</div>
+            <div id="dl-links"></div>
+          </div>
+
+        </div><!-- /results -->
+      </div>
+    </div>
+
+  </div><!-- /right column -->
+
+  <!-- ── Run History ────────────────────────────────────────────── -->
   <div class="card full">
     <div class="card-hdr">Run History</div>
     <div class="tbl-wrap">
@@ -745,7 +983,7 @@
           </tr>
         </thead>
         <tbody id="hist-body">
-          <tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:20px">Loading history...</td></tr>
+          <tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:24px">Loading history...</td></tr>
         </tbody>
       </table>
     </div>
@@ -753,10 +991,10 @@
 
 </main>
 
-<!-- ── Delete Client Modal ──────────────────────────────────── -->
+<!-- ── Delete Client Modal ──────────────────────────────────────── -->
 <div class="modal-backdrop" id="del-client-backdrop" onclick="closeDeleteClientModal(event)">
   <div class="modal" style="width:380px" onclick="event.stopPropagation()">
-    <div class="modal-hdr" style="background:#9C0006;">
+    <div class="modal-hdr" style="background:linear-gradient(135deg,#991B1B,#DC2626)">
       Delete Client
       <button onclick="closeDeleteClientModal()">&times;</button>
     </div>
@@ -764,10 +1002,10 @@
       <p style="margin-bottom:12px;font-size:13px;">
         Are you sure you want to delete <strong id="del-client-name"></strong>?
       </p>
-      <p style="font-size:12px;color:var(--grey-dk);">
+      <p style="font-size:12px;color:var(--text-muted);">
         This removes the client config file. Run history and output files are not affected.
       </p>
-      <div id="del-error" style="display:none;color:#9C0006;font-size:12px;margin-top:10px;"></div>
+      <div id="del-error" style="display:none;color:var(--danger);font-size:12px;margin-top:10px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeDeleteClientModal()">Cancel</button>
@@ -776,7 +1014,7 @@
   </div>
 </div>
 
-<!-- ── New Client Modal ─────────────────────────────────────── -->
+<!-- ── New Client Modal ─────────────────────────────────────────── -->
 <div class="modal-backdrop" id="new-client-backdrop" onclick="closeNewClientModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-hdr">
@@ -785,38 +1023,32 @@
     </div>
     <div class="modal-body">
       <div class="field">
-        <label class="lbl">Client Name <span style="color:#c00">*</span></label>
-        <input type="text" id="nc-name" placeholder="e.g. Smith Dental LLC"
-               style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        <label class="lbl">Client Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="nc-name" placeholder="e.g. Smith Dental LLC">
       </div>
       <div class="modal-row">
         <div class="field">
           <label class="lbl">Preparer Name</label>
-          <input type="text" id="nc-preparer" placeholder="e.g. Jane Doe, CPA"
-                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+          <input type="text" id="nc-preparer" placeholder="e.g. Jane Doe, CPA">
         </div>
         <div class="field">
           <label class="lbl">Firm Name</label>
-          <input type="text" id="nc-firm" placeholder="e.g. Patrick LLC"
-                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+          <input type="text" id="nc-firm" placeholder="e.g. Patrick LLC">
         </div>
       </div>
       <div class="modal-row">
         <div class="field">
           <label class="lbl">Variance Threshold (%)</label>
-          <input type="number" id="nc-threshold" value="5.0" min="0.1" max="100" step="0.5"
-                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+          <input type="number" id="nc-threshold" value="5.0" min="0.1" max="100" step="0.5">
         </div>
         <div class="field">
           <label class="lbl">Materiality ($)</label>
-          <input type="number" id="nc-materiality" value="2500" min="0" step="100"
-                 style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+          <input type="number" id="nc-materiality" value="2500" min="0" step="100">
         </div>
       </div>
       <div class="field">
         <label class="lbl">Fiscal Year End</label>
-        <select id="nc-fye"
-                style="width:100%;padding:8px 10px;border:1px solid var(--grey-md);border-radius:4px;font-size:13px;font-family:inherit;">
+        <select id="nc-fye">
           <option value="12-31">December 31</option>
           <option value="01-31">January 31</option>
           <option value="02-28">February 28</option>
@@ -831,7 +1063,7 @@
           <option value="11-30">November 30</option>
         </select>
       </div>
-      <div id="nc-error" style="display:none;color:#9C0006;font-size:12px;margin-top:6px;"></div>
+      <div id="nc-error" style="display:none;color:var(--danger);font-size:12px;margin-top:6px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeNewClientModal()">Cancel</button>
@@ -859,6 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   document.getElementById('inp-month').value = monthVal;
   document.getElementById('br-month').value  = monthVal;
+  document.getElementById('ag-month').value  = monthVal;
   document.getElementById('fl-month').value  = monthVal;
 
   // Close mode toggle
@@ -921,14 +1154,14 @@ function addAcctRow() {
   const i   = _acctCount++;
   const row = document.createElement('div');
   row.id    = `acct-row-${i}`;
-  row.style.cssText = 'border:1px solid var(--grey-md);border-radius:4px;padding:12px;margin-bottom:10px;position:relative;background:#fafafa;';
+  row.style.cssText = 'border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;position:relative;background:var(--bg);transition:border-color .15s;';
   row.innerHTML = `
     <button type="button" onclick="removeAcctRow(${i})"
-      style="position:absolute;top:8px;right:8px;background:var(--red);border:none;
-             border-radius:3px;color:var(--red-dk);font-weight:900;cursor:pointer;
-             width:22px;height:22px;font-size:13px;line-height:1;">&times;</button>
-    <div style="font-size:11px;font-weight:700;color:var(--grey-dk);text-transform:uppercase;
-                letter-spacing:.4px;margin-bottom:8px;">Account ${i + 1}</div>
+      style="position:absolute;top:8px;right:8px;background:var(--danger-lt);border:1.5px solid var(--danger-bd);
+             border-radius:5px;color:var(--danger);font-weight:900;cursor:pointer;
+             width:24px;height:24px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
+                letter-spacing:.6px;margin-bottom:10px;">Account ${i + 1}</div>
     <div class="field">
       <label class="lbl">Account Name</label>
       <input type="text" id="br-name-${i}" placeholder="e.g. Main Checking - Chase">
@@ -1359,19 +1592,19 @@ function onDone(j) {
   const jt = j.job_type || 'close';
 
   if (jt === 'close') {
-    document.getElementById('stats-close').style.display = 'flex';
+    document.getElementById('stats-close').style.display = 'grid';
     document.getElementById('s-accounts').textContent = j.accounts ?? '--';
     document.getElementById('s-flagged').textContent  = j.flagged  ?? '--';
     document.getElementById('s-cost').textContent     = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
     document.getElementById('s-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   } else if (jt === 'bank_rec') {
-    document.getElementById('stats-rec').style.display = 'flex';
+    document.getElementById('stats-rec').style.display = 'grid';
     document.getElementById('r-matched').textContent    = j.matched    ?? '--';
     document.getElementById('r-exceptions').textContent = j.exceptions ?? '--';
     document.getElementById('r-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
     document.getElementById('r-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   } else if (jt === 'multi_bank_rec') {
-    document.getElementById('stats-multi-rec').style.display = 'flex';
+    document.getElementById('stats-multi-rec').style.display = 'grid';
     const total = j.accounts_total ?? '--';
     const rec   = j.accounts_reconciled ?? '--';
     document.getElementById('mr-reconciled').textContent = `${rec}/${total}`;
@@ -1379,13 +1612,13 @@ function onDone(j) {
     document.getElementById('mr-cost').textContent       = j.cost_usd > 0 ? `$${Number(j.cost_usd).toFixed(4)}` : '--';
     document.getElementById('mr-time').textContent       = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   } else if (jt === 'aging') {
-    document.getElementById('stats-aging').style.display = 'flex';
+    document.getElementById('stats-aging').style.display = 'grid';
     document.getElementById('ag-entities').textContent = j.entity_count  ?? '--';
     document.getElementById('ag-flagged').textContent  = j.flagged_count ?? '--';
     document.getElementById('ag-overdue').textContent  = j.overdue_pct != null ? `${j.overdue_pct}%` : '--';
     document.getElementById('ag-time').textContent     = j.elapsed_s ? `${j.elapsed_s}s` : '--';
   } else if (jt === 'flux') {
-    document.getElementById('stats-flux').style.display = 'flex';
+    document.getElementById('stats-flux').style.display = 'grid';
     document.getElementById('fl-accounts').textContent = j.total_accounts ?? '--';
     document.getElementById('fl-mom').textContent      = j.mom_flagged    ?? '--';
     document.getElementById('fl-yoy').textContent      = j.has_yoy ? (j.yoy_flagged ?? '--') : 'N/A';
@@ -1456,7 +1689,7 @@ async function loadHistory() {
     const tbody = document.getElementById('hist-body');
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:20px">No run history yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--grey-dk);padding:24px">No run history yet.</td></tr>';
       return;
     }
 
@@ -1488,6 +1721,8 @@ async function loadHistory() {
 // Helpers
 // ---------------------------------------------------------------------------
 function resetPanel(title) {
+  const ph = document.getElementById('placeholder-card');
+  if (ph) ph.style.display = 'none';
   document.getElementById('status-card').style.display = 'block';
   document.getElementById('status-hdr').textContent    = title;
   document.getElementById('results').style.display     = 'none';
@@ -1499,6 +1734,8 @@ function setProgress(pct, step) {
   document.getElementById('prog-step').textContent    = step;
 }
 function showError(msg) {
+  const ph = document.getElementById('placeholder-card');
+  if (ph) ph.style.display = 'none';
   document.getElementById('status-hdr').textContent = 'Error';
   document.getElementById('status-card').style.display = 'block';
   document.getElementById('alerts').innerHTML = `<div class="alert alert-err">${esc(msg)}</div>`;
